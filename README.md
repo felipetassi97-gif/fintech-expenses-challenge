@@ -4,7 +4,7 @@ Aplicação para registrar e acompanhar receitas e despesas por categoria, com d
 
 ## Escopo
 
-O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A API já oferece cadastro, login e consulta do usuário autenticado. As operações financeiras e as telas ainda estão em desenvolvimento.
+O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A API oferece autenticação, gestão de categorias e transações, além de indicadores financeiros. As telas da aplicação ainda estão em desenvolvimento.
 
 ## Tecnologias e organização
 
@@ -56,9 +56,19 @@ A autenticação usa bcrypt para armazenar senhas como hashes e JWT com validade
 
 O e-mail é normalizado para minúsculas e sem espaços nas extremidades. No cadastro, a senha deve ter pelo menos oito caracteres e no máximo 72 bytes em UTF-8. Erros retornam `{ statusCode, message }`.
 
+## Categorias, transações e indicadores
+
+As rotas abaixo exigem `Authorization: Bearer <token>`. Cada usuário acessa apenas seus próprios dados.
+
+- `GET` e `POST /api/categories`; `GET`, `PATCH` e `DELETE /api/categories/:id`. A exclusão de categoria vinculada a transações retorna 409.
+- `GET` e `POST /api/transactions`; `GET`, `PATCH` e `DELETE /api/transactions/:id`. A listagem aceita `type`, `categoryId`, `startDate`, `endDate`, `page` e `limit` e retorna `data` e `pagination`.
+- `GET /api/dashboard` aceita `startDate` e `endDate` e retorna `balance`, `income`, `expense` e `topCategories`. O saldo considera todo o histórico; os demais indicadores consideram o período informado.
+
+Datas usam `YYYY-MM-DD`, com limites inclusivos. Valores monetários são strings decimais com até duas casas, como `"120.50"`; os valores de transação devem ser positivos. Sem filtro de período, os indicadores consideram todo o histórico.
+
 ## Verificações
 
-Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Os testes de autenticação exigem um PostgreSQL separado para testes, com a migration aplicada:
+Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Os testes da API exigem um PostgreSQL separado para testes, com a migration aplicada:
 
 ```bash
 export TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/fintech_test?schema=public'
@@ -66,4 +76,4 @@ DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:deploy -w @fintech/api
 npm run test -w @fintech/api
 ```
 
-Os testes criam e removem o próprio usuário de teste; não use banco de produção. Ainda não há demonstração pública disponível.
+Os testes criam e removem seus próprios dados; não use banco de produção. Ainda não há demonstração pública disponível.
