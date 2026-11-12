@@ -4,7 +4,7 @@ Aplicação para registrar e acompanhar receitas e despesas por categoria, com d
 
 ## Escopo
 
-O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A API oferece autenticação, gestão de categorias e transações, além de indicadores financeiros. As telas da aplicação ainda estão em desenvolvimento.
+O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A interface React consome a API para autenticação, operações de categorias e transações e consulta dos indicadores.
 
 ## Tecnologias e organização
 
@@ -24,7 +24,9 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Em `apps/api/.env`, ajuste `DATABASE_URL` para o banco local e defina `JWT_SECRET`. `PORT` configura a porta da API. Em `apps/web/.env`, `VITE_API_URL` indica a URL da API; seu consumo será integrado à interface posteriormente.
+Em `apps/api/.env`, ajuste `DATABASE_URL` para o banco local e defina `JWT_SECRET`. `PORT` configura a porta da API. Em `apps/web/.env`, `VITE_API_URL` indica a URL da API usada pela interface.
+
+`CORS_ORIGINS` define as origens permitidas para o frontend, separadas por vírgula. O padrão atende ao Vite local nas portas e endereços indicados no arquivo de exemplo; configure as origens reais antes de publicar.
 
 Gere o cliente Prisma e aplique as migrations:
 
@@ -48,6 +50,8 @@ O PostgreSQL armazena valores monetários como `Decimal(14,2)` e datas sem horá
 
 A autenticação usa bcrypt para armazenar senhas como hashes e JWT com validade de uma hora. A API está organizada por responsabilidade em módulos NestJS. O monorepo mantém API e interface próximas, com dependências e execução independentes.
 
+No frontend, as telas mantêm estado local com hooks do React porque os fluxos são independentes e não precisam de um store global. Uma camada Fetch centraliza URL, autenticação, serialização e mensagens de erro para manter as páginas focadas na interface e nas ações do usuário.
+
 ## Autenticação
 
 - `POST /api/auth/register`: recebe `{ "name", "email", "password" }` e retorna o usuário sem a senha.
@@ -65,6 +69,10 @@ As rotas abaixo exigem `Authorization: Bearer <token>`. Cada usuário acessa ape
 - `GET /api/dashboard` aceita `startDate` e `endDate` e retorna `balance`, `income`, `expense` e `topCategories`. O saldo considera todo o histórico; os demais indicadores consideram o período informado.
 
 Datas usam `YYYY-MM-DD`, com limites inclusivos. Valores monetários são strings decimais com até duas casas, como `"120.50"`; os valores de transação devem ser positivos. Sem filtro de período, os indicadores consideram todo o histórico.
+
+### Diagnóstico de cadastro e login local
+
+Cadastro e login exigem PostgreSQL ativo, migrations aplicadas e API executando. Crie `apps/api/.env` e `apps/web/.env` a partir dos arquivos `.env.example`; ajuste `DATABASE_URL`, gere um `JWT_SECRET` aleatório e mantenha `VITE_API_URL` apontando para a API. Depois execute `npm run prisma:deploy -w @fintech/api`, inicie `npm run dev:api` e `npm run dev:web` em terminais separados e abra o endereço informado pelo Vite. O frontend informa quando a API não responde ou quando a origem precisa ser liberada em `CORS_ORIGINS`.
 
 ## Verificações
 
