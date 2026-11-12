@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Documento do desafio
+/desafio_nestjs_react.pdf
+
+# Prisma client gerado
+/apps/api/src/generated/
