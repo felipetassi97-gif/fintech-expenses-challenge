@@ -1,0 +1,125 @@
+/* Dashboard surfaces and interactions */
+.content .metrics { gap: 18px; margin-bottom: 22px; }
+.content .metric { position: relative; overflow: hidden; min-height: 160px; gap: 14px; padding: 24px 26px; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.content .metric:hover { box-shadow: 0 12px 28px rgba(23, 54, 97, .10); }
+.content .metric::after { content: ""; position: absolute; right: -32px; bottom: -70px; width: 170px; height: 120px; border: 1px solid currentColor; border-radius: 50%; opacity: .09; pointer-events: none; }
+.content .metric.balance { background: linear-gradient(135deg, #eaf3ff, #dcecff); color: #164a9b; }
+.content .metric.income { background: linear-gradient(135deg, #e9faf2, #daf5e9); color: #087d51; }
+.content .metric.expense { background: linear-gradient(135deg, #fff2f3, #ffeaec); color: #c93640; }
+.content .metric-label { color: #172642; gap: 12px; font-size: 14px; }
+.content .metric-label .metric-icon { display: grid; place-items: center; width: 29px; height: 29px; color: inherit; }
+.content .metric-icon svg { width: 25px; height: 25px; }
+.content .balance .metric-icon { color: #1254c8; }
+.content .income .metric-icon { color: #087d51; }
+.content .expense .metric-icon { color: #d92d31; }
+.content .metric strong { min-width: 0; max-width: 100%; color: #101e37; font-size: clamp(24px, 2vw, 32px); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+.content .metric strong.metric-amount-compact { font-size: clamp(16px, 1.5vw, 24px); }
+.content .metric small { color: #536982; text-transform: none; }
+.content .metric-trend { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: auto; }
+.content .metric-trend { flex-wrap: wrap; row-gap: 5px; }
+.content .metric-trend > small { overflow-wrap: anywhere; }
+.content .metric-trend > .metric-difference { color: #263e5c; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.content .trend-badge { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; border-radius: 9px; padding: 6px 9px; font-size: 12px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.content .trend-badge svg { width: 15px; height: 15px; }
+.content .trend-badge.positive { color: #087d51; background: #c5f7df; }
+.content .trend-badge.negative { color: #c8282d; background: #ffe0e2; }
+.content .trend-badge.neutral { color: #536982; background: #edf2f8; }
+.content .dashboard-panel { min-width: 0; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.content .dashboard-panel:hover { border-color: #c3d7ed; box-shadow: 0 10px 30px rgba(23, 54, 97, .07); }
+.content .dashboard-panel .section-head h2 { font-size: 19px; }
+.content .dashboard-panel .section-head p { margin-top: 7px; }
+.content .chart-wrap { gap: 32px; }
+.content .donut { width: clamp(165px, 14vw, 220px); box-shadow: 0 8px 22px rgba(18, 84, 200, .10); }
+.content .donut > div { width: 69%; height: 69%; text-align: center; padding: 8px; }
+.content .donut strong { font-size: clamp(12px, 1.1vw, 18px); line-height: 1.15; overflow-wrap: anywhere; }
+.content .donut small { font-size: 11px; }
+.content .legend li { min-width: 0; gap: 12px; }
+.content .legend li > span:nth-child(2) { flex: 1; overflow-wrap: anywhere; }
+.content .legend li strong { text-align: right; color: #142440; font-variant-numeric: tabular-nums; }
+.content .legend li strong small { display: block; margin-top: 3px; color: #687b94; font-size: 11px; font-weight: 500; }
+.content .recent { padding: 11px 0; transition: background-color 160ms ease; }
+.content .recent:hover { background: #f7faff; }
+.content .dashboard-panel .section-head .link { flex-shrink: 0; white-space: nowrap; }
+.content .direction svg { width: 19px; height: 19px; }
+.content .period-select-wrap select { transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.content .period-select-wrap select:hover { background-color: #f8fbff; box-shadow: 0 3px 12px rgba(18, 84, 200, .07); }
+.content .period-indicators { margin: 25px 0 22px; }
+.content .period-indicators h2 { margin: 0 0 15px; font-size: 19px; }
+.content .period-indicator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.content .period-indicator-card { display: flex; align-items: center; gap: 13px; min-width: 0; min-height: 104px; padding: 16px; border: 1px solid #d6e4f5; border-radius: 14px; background: linear-gradient(145deg, #fff, #f7faff); box-shadow: 0 4px 15px rgba(24, 52, 81, .035); }
+.content .period-indicator-icon { display: grid; place-items: center; width: 48px; height: 52px; flex: 0 0 48px; border-radius: 14px; background: #e8f2ff; color: #1254c8; }
+.content .period-indicator-icon svg { width: 27px; height: 27px; }
+.content .period-indicator-icon.expense { background: #e5f8f2; color: #05836b; }
+.content .period-indicator-icon.share { background: #e7f0ff; color: #1254c8; }
+.content .period-indicator-icon.result { background: #def8ee; color: #078d72; }
+.content .period-indicator-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.content .period-indicator-value { color: #111c33; font-size: clamp(18px, 1.55vw, 25px); font-weight: 750; line-height: 1.12; letter-spacing: -.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.content .period-indicator-value.compact { font-size: clamp(15px, 1.3vw, 20px); }
+.content .period-indicator-value.positive { color: #07823f; }
+.content .period-indicator-value.negative { color: #c8282d; }
+.content .period-indicator-label { color: #172642; font-size: 12px; font-weight: 600; line-height: 1.28; }
+.content .period-indicator-copy small { color: #687b94; font-size: 10px; line-height: 1.25; }
+.content .period-indicator-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.content .indicator-help-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+.content .indicator-help-button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: #edf3fb; color: #58708c; cursor: help; }
+.content .indicator-help-button:hover, .content .indicator-help-button:focus-visible { color: #1254c8; background: #dcecff; }
+.content .indicator-help-button svg { width: 14px; height: 14px; }
+.content .indicator-tooltip { position: absolute; z-index: 10; right: 0; bottom: calc(100% + 9px); width: min(250px, calc(100vw - 36px)); padding: 11px 13px; border: 1px solid #294766; border-radius: 9px; background: #102b4e; color: #fff; box-shadow: 0 10px 26px rgba(9, 29, 53, .22); font-size: 12px; font-weight: 500; line-height: 1.5; white-space: normal; }
+.content .indicator-tooltip::after { content: ""; position: absolute; right: 8px; top: 100%; border: 6px solid transparent; border-top-color: #102b4e; }
+.content .indicator-tooltip[hidden] { display: none !important; }
+.content .period-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.content .period-filter-heading > strong { color: #263954; font-size: 12px; font-weight: 650; text-align: right; }
+.content .period-quick-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.content .period-chip { min-height: 32px; padding: 6px 9px; border: 1px solid #cbd9e9; border-radius: 8px; background: #fff; color: #425775; font-size: 11px; font-weight: 600; white-space: nowrap; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.content .period-chip:hover { border-color: #9db6d2; background: #f4f8fd; }
+.content .period-chip.active { border-color: #1254c8; background: #e7f1ff; color: #1254c8; box-shadow: inset 0 0 0 1px rgba(18, 84, 200, .08); }
+.content .period-chip:focus-visible, .content .period-more:focus-visible { outline: 3px solid #21a7e8; outline-offset: 2px; }
+.content .period-more { min-height: 32px; padding: 5px 23px 5px 8px; border-radius: 8px; background-color: #fff; color: #425775; font-size: 11px; font-weight: 600; cursor: pointer; }
+.content .donut { position: relative; display: grid; place-items: center; overflow: visible; background: none; box-shadow: none; }
+.content .donut-chart { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.content .donut-track { fill: none; stroke: #e7eef8; stroke-width: 34; }
+.content .donut-segment { pointer-events: stroke; cursor: pointer; transition: stroke-width 170ms ease, opacity 170ms ease, filter 170ms ease; }
+.content .donut-segment:not(.active):hover { opacity: .82; }
+.content .donut-segment.active { filter: drop-shadow(0 4px 6px rgba(11, 36, 67, .24)); }
+.content .donut-segment:focus-visible { outline: none; filter: drop-shadow(0 0 5px rgba(18, 84, 200, .85)); }
+.content .donut.has-active .donut-segment:not(.active) { opacity: .48; }
+.content .donut-center { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 69%; height: 69%; padding: 9px; border-radius: 50%; background: #fff; text-align: center; pointer-events: none; }
+.content .donut-center strong { max-width: 100%; color: #13223d; font-size: clamp(12px, 1.1vw, 18px); line-height: 1.2; overflow-wrap: anywhere; }
+.content .donut-center small { margin-top: 5px; color: #647894; font-size: 11px; line-height: 1.35; }
+.content .legend li { display: block; padding: 0; }
+.content .legend-entry { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; transition: background-color 140ms ease, opacity 140ms ease; }
+.content .legend-entry:hover, .content .legend-entry:focus-visible, .content .legend-entry.active { background: #f1f6fd; }
+.content .legend-entry:focus-visible { outline: 2px solid #75afe7; outline-offset: 1px; }
+.content .legend-entry .legend-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.content .legend-entry strong { flex: 0 0 auto; text-align: right; color: #142440; font-variant-numeric: tabular-nums; }
+.content .legend-open-icon { width: 16px; height: 16px; flex: 0 0 16px; color: #1254c8; opacity: .55; }
+.content .legend-entry:hover .legend-open-icon, .content .legend-entry:focus-visible .legend-open-icon { opacity: 1; }
+.content .dashboard-skeleton { display: grid; gap: 22px; }
+.content .dashboard-skeleton .skeleton-line, .content .skeleton-indicator-icon { display: block; border-radius: 7px; background: linear-gradient(100deg, #e8eef6 18%, #f6f9fc 38%, #e8eef6 58%); background-size: 220% 100%; animation: dashboard-shimmer 1.4s ease-in-out infinite; }
+.content .skeleton-metric { pointer-events: none; }
+.content .skeleton-label { width: 42%; height: 16px; }
+.content .skeleton-amount { width: 66%; height: 31px; margin-top: 4px; }
+.content .skeleton-trend { width: 54%; height: 24px; margin-top: auto; }
+.content .skeleton-panel { min-height: 426px; }
+.content .skeleton-title { width: 46%; height: 21px; margin-bottom: 9px; }
+.content .skeleton-subtitle { width: 58%; height: 14px; }
+.content .skeleton-chart-area { display: flex; align-items: center; justify-content: center; gap: 28px; min-height: 260px; }
+.content .skeleton-donut { width: clamp(150px, 14vw, 205px); aspect-ratio: 1; flex: 0 0 auto; border-radius: 50%; background: linear-gradient(100deg, #e8eef6 18%, #f6f9fc 38%, #e8eef6 58%); background-size: 220% 100%; animation: dashboard-shimmer 1.4s ease-in-out infinite; }
+.content .skeleton-legend { display: grid; gap: 18px; width: 38%; }
+.content .skeleton-legend .skeleton-line { height: 14px; }
+.content .skeleton-recent-list { margin-top: 24px; }
+.content .skeleton-recent { display: block; position: relative; height: 55px; border-bottom: 1px solid #edf1f6; }
+.content .skeleton-recent::before { content: ""; position: absolute; left: 0; top: 10px; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(100deg, #e8eef6 18%, #f6f9fc 38%, #e8eef6 58%); background-size: 220% 100%; animation: dashboard-shimmer 1.4s ease-in-out infinite; }
+.content .skeleton-recent::after { content: ""; position: absolute; left: 49px; top: 17px; width: 46%; height: 12px; border-radius: 6px; background: linear-gradient(100deg, #e8eef6 18%, #f6f9fc 38%, #e8eef6 58%); background-size: 220% 100%; animation: dashboard-shimmer 1.4s ease-in-out infinite; }
+.content .recent-skeleton { padding-top: 1px; }
+.content .skeleton-indicator { min-height: 104px; }
+.content .skeleton-indicator-icon { width: 48px; height: 52px; flex: 0 0 48px; }
+.content .skeleton-indicator-text { display: grid; flex: 1; gap: 8px; }
+.content .skeleton-indicator-text .skeleton-line:first-child { width: 55%; height: 22px; }
+.content .skeleton-indicator-text .skeleton-line:last-child { width: 86%; height: 14px; }
+@keyframes dashboard-shimmer { to { background-position-x: -220%; } }
+@media (max-width: 1100px) { .content .period-indicator-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .content .metric { min-height: 125px; } .content .chart-wrap { gap: 20px; } .content .skeleton-panel { min-height: 450px; } }
+@media (max-width: 440px) { .content .chart-wrap { align-items: center; } .content .legend { width: 100%; } .content .period-indicator-grid { gap: 10px; } .content .period-indicator-card { min-height: 96px; padding: 12px 10px; gap: 9px; } .content .period-indicator-icon { width: 38px; height: 42px; flex-basis: 38px; border-radius: 12px; } .content .period-indicator-icon svg { width: 22px; height: 22px; } .content .period-indicator-value { font-size: 17px; } .content .period-indicator-value.compact { font-size: 12px; white-space: nowrap; } .content .period-indicator-label { font-size: 11px; } .content .period-filter { min-width: 0; } .content .period-chip { padding-inline: 7px; font-size: 10px; } .content .period-more { padding-inline: 6px 18px; font-size: 10px; } .content .skeleton-chart-area { flex-direction: column; gap: 20px; padding-top: 20px; } .content .skeleton-legend { width: 100%; gap: 10px; } }
+@media (max-width: 360px) { .content .period-indicator-grid { grid-template-columns: 1fr; } .content .period-indicator-value.compact { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .content .metric, .content .dashboard-panel, .content .recent, .content .period-select-wrap select, .content .period-chip, .content .donut-segment, .content .legend-entry { transition: none; } .content .dashboard-skeleton .skeleton-line, .content .skeleton-indicator-icon, .content .skeleton-donut, .content .skeleton-recent::before, .content .skeleton-recent::after { animation: none; } .content .metric:hover { transform: none; } }

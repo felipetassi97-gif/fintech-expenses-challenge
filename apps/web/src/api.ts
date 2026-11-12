@@ -10,10 +10,35 @@ export type Transaction = {
   date: string;
 };
 export type TransactionInput = Omit<Transaction, "id">;
+export type MetricChange = {
+  value: string | null;
+  amountDifference: string | null;
+  status: "available" | "new" | "no_baseline" | "unavailable";
+  direction: "up" | "down" | "flat";
+};
 export type Dashboard = {
   balance: string;
+  balanceAtEnd: string;
   income: string;
   expense: string;
+  comparison: {
+    startDate: string;
+    endDate: string;
+    balance: string;
+    income: string;
+    expense: string;
+  } | null;
+  changes: {
+    balance: MetricChange;
+    income: MetricChange;
+    expense: MetricChange;
+  };
+  periodIndicators: {
+    incomeGrowth: MetricChange;
+    expenseVariation: MetricChange;
+    operationalParticipation: string | null;
+    periodResult: string;
+  };
   topCategories: { categoryId: string; name: string; amount: string }[];
 };
 export type TransactionPage = {

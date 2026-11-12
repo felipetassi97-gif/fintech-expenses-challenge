@@ -303,6 +303,65 @@ textarea {
   padding: 9px;
   font-size: 12px;
 }
+.period-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: min(100%, 350px);
+  min-width: 300px;
+}
+.period-label {
+  font-size: 13px;
+}
+.period-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.period-select-wrap > svg:first-child {
+  position: absolute;
+  z-index: 1;
+  left: 14px;
+  width: 19px;
+  height: 19px;
+  color: #425775;
+  pointer-events: none;
+}
+.period-select-wrap select {
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 42px 10px 44px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.period-select-wrap select:hover {
+  border-color: #9db6d2;
+}
+.period-select-wrap .period-chevron {
+  position: absolute;
+  right: 13px;
+  width: 17px;
+  height: 17px;
+  color: #425775;
+  pointer-events: none;
+}
+.period-custom-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 3px;
+}
+.period-custom-range label {
+  font-size: 12px;
+}
+.period-custom-range input {
+  width: 100%;
+  padding: 9px;
+  font-size: 12px;
+}
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -817,6 +876,10 @@ td:first-child {
   }
   .date-filters input {
     width: 100%;
+  }
+  .period-filter {
+    width: 100%;
+    min-width: 0;
   }
   .auth-main {
     padding: 24px;
