@@ -153,3 +153,6 @@ vite.config.ts.timestamp-*
 
 # Prisma client gerado
 /apps/api/src/generated/
+
+# Checklist local de acompanhamento do desafio
+/checklist.md

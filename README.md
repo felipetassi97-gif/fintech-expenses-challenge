@@ -4,7 +4,7 @@ Aplicação para registrar e acompanhar receitas e despesas por categoria, com d
 
 ## Escopo
 
-O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. No estado atual, estão disponíveis a estrutura das aplicações, a modelagem do banco e os DTOs iniciais; as rotas e telas funcionais ainda não foram implementadas.
+O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A API já oferece cadastro, login e consulta do usuário autenticado. As operações financeiras e as telas ainda estão em desenvolvimento.
 
 ## Tecnologias e organização
 
@@ -46,8 +46,24 @@ Para criar migrations durante o desenvolvimento, use `npm run prisma:migrate -w 
 
 O PostgreSQL armazena valores monetários como `Decimal(14,2)` e datas sem horário. A relação entre transações e categorias inclui o identificador do usuário, garantindo no banco que ambos tenham o mesmo proprietário. Restrições também impedem valores não positivos e a exclusão de categorias com transações.
 
-A API está organizada por responsabilidade em módulos NestJS. O monorepo mantém API e interface próximas, com dependências e execução independentes.
+A autenticação usa bcrypt para armazenar senhas como hashes e JWT com validade de uma hora. A API está organizada por responsabilidade em módulos NestJS. O monorepo mantém API e interface próximas, com dependências e execução independentes.
+
+## Autenticação
+
+- `POST /api/auth/register`: recebe `{ "name", "email", "password" }` e retorna o usuário sem a senha.
+- `POST /api/auth/login`: recebe `{ "email", "password" }` e retorna `{ "accessToken" }`.
+- `GET /api/auth/me`: recebe o token em `Authorization: Bearer <token>` e retorna o usuário autenticado.
+
+O e-mail é normalizado para minúsculas e sem espaços nas extremidades. No cadastro, a senha deve ter pelo menos oito caracteres e no máximo 72 bytes em UTF-8. Erros retornam `{ statusCode, message }`.
 
 ## Verificações
 
-Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Ainda não há suíte de testes automatizados ou demonstração pública disponível.
+Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Os testes de autenticação exigem um PostgreSQL separado para testes, com a migration aplicada:
+
+```bash
+export TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/fintech_test?schema=public'
+DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:deploy -w @fintech/api
+npm run test -w @fintech/api
+```
+
+Os testes criam e removem o próprio usuário de teste; não use banco de produção. Ainda não há demonstração pública disponível.
