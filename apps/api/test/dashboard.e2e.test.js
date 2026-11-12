@@ -50,7 +50,7 @@ const dashboard = (credential = token) => request(app.getHttpServer()).get('/api
 
 test('historical balance and inclusive period totals use exact decimal strings and top three expenses', async () => {
   const res = await dashboard().query({ startDate: '2025-02-01', endDate: '2025-02-28' }).expect(200);
-  expect(res.body).toEqual({ balance: '108.65', income: '20.00', expense: '10.45', topCategories: [
+  expect(res.body).toMatchObject({ balance: '108.65', income: '20.00', expense: '10.45', topCategories: [
     { categoryId: categoryIds[1], name: 'Category 1', amount: '5.15' },
     { categoryId: categoryIds[2], name: 'Category 2', amount: '3.00' },
     { categoryId: categoryIds[3], name: 'Category 3', amount: '2.00' },
@@ -65,9 +65,66 @@ test('optional bounds, empty periods and separate users', async () => {
   const until = await dashboard().query({ endDate: '2025-01-01' }).expect(200);
   expect(until.body).toMatchObject({ income: '100.10', expense: '0.00', topCategories: [] });
   const empty = await dashboard().query({ startDate: '2026-01-01' }).expect(200);
-  expect(empty.body).toEqual({ balance: '108.65', income: '0.00', expense: '0.00', topCategories: [] });
+  expect(empty.body).toMatchObject({ balance: '108.65', income: '0.00', expense: '0.00', topCategories: [] });
   const other = await dashboard(otherToken).expect(200);
-  expect(other.body).toEqual({ balance: '999999999999.99', income: '999999999999.99', expense: '0.00', topCategories: [] });
+  expect(other.body).toMatchObject({ balance: '999999999999.99', income: '999999999999.99', expense: '0.00', topCategories: [] });
+});
+
+test('calculates comparison totals, balance through the selected end date and period indicators', async () => {
+  const res = await dashboard().query({
+    startDate: '2025-02-01',
+    endDate: '2025-02-28',
+    comparisonStartDate: '2025-01-01',
+    comparisonEndDate: '2025-01-31',
+  }).expect(200);
+
+  expect(res.body).toMatchObject({
+    balance: '108.65',
+    balanceAtEnd: '109.65',
+    income: '20.00',
+    expense: '10.45',
+    comparison: {
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      balance: '100.10',
+      income: '100.10',
+      expense: '0.00',
+    },
+    changes: {
+      balance: { value: '9.5', amountDifference: '9.55', status: 'available', direction: 'up' },
+      income: { value: '-80.0', amountDifference: '-80.10', status: 'available', direction: 'down' },
+      expense: { value: null, amountDifference: '10.45', status: 'new', direction: 'up' },
+    },
+    periodIndicators: {
+      incomeGrowth: { value: '-80.0', amountDifference: '-80.10', status: 'available', direction: 'down' },
+      expenseVariation: { value: null, amountDifference: '10.45', status: 'new', direction: 'up' },
+      operationalParticipation: '52.3',
+      periodResult: '9.55',
+    },
+  });
+});
+
+test('marks zero-baseline comparisons and rejects invalid comparison ranges', async () => {
+  const res = await dashboard().query({
+    startDate: '2025-01-01',
+    endDate: '2025-01-31',
+    comparisonStartDate: '2024-12-01',
+    comparisonEndDate: '2024-12-31',
+  }).expect(200);
+  expect(res.body.changes).toMatchObject({
+    balance: { value: null, amountDifference: '100.10', status: 'new', direction: 'up' },
+    income: { value: null, amountDifference: '100.10', status: 'new', direction: 'up' },
+    expense: { value: null, amountDifference: '0.00', status: 'no_baseline', direction: 'flat' },
+  });
+
+  for (const query of [
+    { startDate: '2025-02-01', endDate: '2025-02-28', comparisonStartDate: '2025-01-01' },
+    { comparisonStartDate: '2025-01-01', comparisonEndDate: '2025-01-31' },
+    { startDate: '2025-02-01', endDate: '2025-02-28', comparisonStartDate: '2025-01-31', comparisonEndDate: '2025-01-01' },
+    { startDate: '2025-02-01', endDate: '2025-02-28', comparisonStartDate: '2025-02-01', comparisonEndDate: '2025-02-15' },
+  ]) {
+    await dashboard().query(query).expect(400);
+  }
 });
 
 test('rejects malformed dates, reversed bounds, unknown parameters and invalid credentials', async () => {

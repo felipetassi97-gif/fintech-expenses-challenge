@@ -36,7 +36,7 @@ test('registration through financial operations and dashboard', async () => {
     .send({ categoryId: category.body.id, description: 'Lunch', amount: '10.25', type: 'EXPENSE', date: '2026-01-15' }).expect(201);
   const dashboard = await request(server).get('/api/dashboard').set('Authorization', authorization)
     .query({ startDate: '2026-01-01', endDate: '2026-01-31' }).expect(200);
-  expect(dashboard.body).toEqual({ balance: '-10.25', income: '0.00', expense: '10.25', topCategories: [
+  expect(dashboard.body).toMatchObject({ balance: '-10.25', income: '0.00', expense: '10.25', topCategories: [
     { categoryId: category.body.id, name: 'Expenses', amount: '10.25' },
   ] });
   await request(server).delete(`/api/categories/${category.body.id}`).set('Authorization', authorization).expect(409);
