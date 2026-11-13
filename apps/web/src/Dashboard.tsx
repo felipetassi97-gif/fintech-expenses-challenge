@@ -6,7 +6,7 @@ import { comparisonRange, dateValue, localToday } from "./dashboard-period";
 import type { PeriodPreset } from "./dashboard-period";
 import type { Dashboard, TransactionPage, User } from "./api";
 import { DashboardTopMetrics, PeriodIndicators } from "./DashboardMetrics";
-import { Heading, State, day, money, useLoad } from "./shared";
+import { DATE_RANGE_ERROR, Heading, State, day, hasInvertedDateRange, money, useLoad } from "./shared";
 import type { Page } from "./shared";
 
 function monthName(date: Date, width: "short" | "long" = "short"): string {
@@ -45,6 +45,7 @@ function PeriodFilter({
   onPresetChange,
   onStartChange,
   onEndChange,
+  invalidDateRange,
 }: {
   preset: PeriodPreset;
   start: string;
@@ -52,6 +53,7 @@ function PeriodFilter({
   onPresetChange: (preset: PeriodPreset) => void;
   onStartChange: (value: string) => void;
   onEndChange: (value: string) => void;
+  invalidDateRange: boolean;
 }) {
   const today = localToday();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -151,6 +153,8 @@ function PeriodFilter({
               type="date"
               value={start}
               max={end || undefined}
+              aria-invalid={invalidDateRange || undefined}
+              aria-describedby={invalidDateRange ? "dashboard-date-range-error" : undefined}
               onChange={(event) => onStartChange(event.target.value)}
             />
           </label>
@@ -160,9 +164,16 @@ function PeriodFilter({
               type="date"
               value={end}
               min={start || undefined}
+              aria-invalid={invalidDateRange || undefined}
+              aria-describedby={invalidDateRange ? "dashboard-date-range-error" : undefined}
               onChange={(event) => onEndChange(event.target.value)}
             />
           </label>
+          {invalidDateRange && (
+            <p id="dashboard-date-range-error" className="field-error date-range-error" role="alert">
+              {DATE_RANGE_ERROR}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -247,7 +258,8 @@ export function DashboardView({
     return dateValue(new Date(today.getFullYear(), today.getMonth(), 1));
   });
   const [end, setEnd] = useState(() => dateValue(localToday()));
-  const previousPeriod = comparisonRange(preset, start, end);
+  const invalidDateRange = hasInvertedDateRange(start, end);
+  const previousPeriod = invalidDateRange ? null : comparisonRange(preset, start, end);
   const suffix = queryString({
     startDate: start,
     endDate: end,
@@ -273,12 +285,13 @@ export function DashboardView({
                 : start && end
                   ? `${fullDate(start)} – ${fullDate(end)}`
                   : "Período personalizado";
-  const result = useLoad<Dashboard>(`/dashboard${suffix}`, token, logout, revision);
+  const result = useLoad<Dashboard>(`/dashboard${suffix}`, token, logout, revision, !invalidDateRange);
   const recent = useLoad<TransactionPage>(
     `/transactions${queryString({ startDate: start, endDate: end, limit: 5 })}`,
     token,
     logout,
     revision,
+    !invalidDateRange,
   );
   const comparisonCaption = result.data?.comparison
     ? `vs. ${comparisonLabel(result.data.comparison.startDate, result.data.comparison.endDate)}`
@@ -304,6 +317,7 @@ export function DashboardView({
             onPresetChange={setPreset}
             onStartChange={setStart}
             onEndChange={setEnd}
+            invalidDateRange={invalidDateRange}
           />
         }
       />

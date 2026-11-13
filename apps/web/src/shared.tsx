@@ -4,6 +4,10 @@ export { money } from "./money.js";
 export type Page = "dashboard" | "transactions" | "categories";
 export const day = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
+export const DATE_RANGE_ERROR =
+  "A data inicial deve ser igual ou anterior à data final.";
+export const hasInvertedDateRange = (start: string, end: string) =>
+  Boolean(start && end && start > end);
 export const errorText = (error: unknown) =>
   error instanceof ApiError && error.status === 0
     ? error.message
@@ -33,12 +37,20 @@ export function useLoad<T>(
   token: string,
   logout: () => void,
   revision = 0,
+  enabled = true,
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loadedQuery, setLoadedQuery] = useState<{ path: string; revision: number } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    if (!enabled) {
+      setData(null);
+      setLoadedQuery(null);
+      setError("");
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -59,7 +71,7 @@ export function useLoad<T>(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [path, token, logout, revision]);
+  }, [path, token, logout, revision, enabled]);
   return { data, error, loading, loadedQuery };
 }
 export function Heading({
@@ -108,6 +120,7 @@ export function DateFilters({
   setEnd: (s: string) => void;
   onClear: () => void;
 }) {
+  const invalidRange = hasInvertedDateRange(start, end);
   return (
     <div className="date-filters">
       <label>
@@ -116,6 +129,8 @@ export function DateFilters({
           type="date"
           value={start}
           max={end || undefined}
+          aria-invalid={invalidRange || undefined}
+          aria-describedby={invalidRange ? "transaction-date-range-error" : undefined}
           onChange={(e) => setStart(e.target.value)}
         />
       </label>
@@ -125,6 +140,8 @@ export function DateFilters({
           type="date"
           value={end}
           min={start || undefined}
+          aria-invalid={invalidRange || undefined}
+          aria-describedby={invalidRange ? "transaction-date-range-error" : undefined}
           onChange={(e) => setEnd(e.target.value)}
         />
       </label>
@@ -135,6 +152,11 @@ export function DateFilters({
         >
           Limpar
         </button>
+      )}
+      {invalidRange && (
+        <p id="transaction-date-range-error" className="field-error date-range-error" role="alert">
+          {DATE_RANGE_ERROR}
+        </p>
       )}
     </div>
   );

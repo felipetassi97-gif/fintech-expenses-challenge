@@ -69,10 +69,12 @@ export function TransactionEditor({
     initialForm(item, categories),
   );
   const [message, setMessage] = useState("");
+  const [amountError, setAmountError] = useState("");
   const [saving, setSaving] = useState(false);
   const busy = write.busy;
   const operation = useRef(false);
   const mounted = useRef(true);
+  const amountInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -91,10 +93,18 @@ export function TransactionEditor({
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (operation.current || !write.start()) return;
+    if (operation.current) return;
+    const normalizedAmount = form.amount.trim().replace(",", ".");
+    if (/^0+(?:\.0+)?$/.test(normalizedAmount)) {
+      setAmountError("O valor deve ser maior que zero.");
+      amountInput.current?.focus();
+      return;
+    }
+    if (!write.start()) return;
     operation.current = true;
     setSaving(true);
     setMessage("");
+    setAmountError("");
     const isNew = item === "new";
     let changed: "transactions" | null = null;
 
@@ -164,16 +174,26 @@ export function TransactionEditor({
           <label>
             Valor (R$)
             <input
+              ref={amountInput}
+              id="transaction-amount"
               inputMode="decimal"
               value={form.amount}
-              onChange={(event) =>
-                setForm({ ...form, amount: event.target.value })
-              }
+              aria-invalid={amountError ? true : undefined}
+              aria-describedby={amountError ? "transaction-amount-error" : undefined}
+              onChange={(event) => {
+                setForm({ ...form, amount: event.target.value });
+                setAmountError("");
+              }}
               placeholder="0,00"
               required
               pattern="[0-9]+([.,][0-9]{1,2})?"
               disabled={busy}
             />
+            {amountError && (
+              <small id="transaction-amount-error" className="field-error" role="alert">
+                {amountError}
+              </small>
+            )}
           </label>
           <label>
             Categoria

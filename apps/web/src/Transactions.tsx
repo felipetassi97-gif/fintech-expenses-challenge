@@ -12,6 +12,7 @@ import {
   Heading,
   State,
   day,
+  hasInvertedDateRange,
   errorText,
   money,
   useLoad,
@@ -76,12 +77,14 @@ export function Transactions({
   }
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
+  const invalidDateRange = hasInvertedDateRange(start, end);
   const listPath = `/transactions${queryString({ type, categoryId: category, startDate: start, endDate: end, page, limit: 10 })}`;
   const list = useLoad<TransactionPage>(
     listPath,
     token,
     logout,
     revision,
+    !invalidDateRange,
   );
   const pagination = list.data?.pagination;
   const lastPage = Math.max(1, pagination?.totalPages ?? 0);
