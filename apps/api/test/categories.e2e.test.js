@@ -69,11 +69,12 @@ test('hides other users categories for every operation', async () => {
 });
 
 test('validates DTOs and rejects userId injection', async () => {
-  for (const body of [{}, { name: '' }, { name: 'a'.repeat(121) }, { name: 'A', description: 'a'.repeat(501) }, { name: 'A', userId: ids[1] }]) {
+  for (const body of [{}, { name: '' }, { name: ' \t ' }, { name: 'a'.repeat(121) }, { name: 'A', description: 'a'.repeat(501) }, { name: 'A', userId: ids[1] }]) {
     await api().post('/api/categories').set('Authorization', tokens[0]).send(body).expect(400);
   }
   const category = await prisma.category.create({ data: { userId: ids[0], name: 'Valid' } });
   await api().patch(`/api/categories/${category.id}`).set('Authorization', tokens[0]).send({ name: null }).expect(400);
+  await api().patch(`/api/categories/${category.id}`).set('Authorization', tokens[0]).send({ name: ' \t ' }).expect(400);
   await api().patch(`/api/categories/${category.id}`).set('Authorization', tokens[0]).send({ userId: ids[1] }).expect(400);
 });
 
@@ -92,14 +93,24 @@ test('returns conflict when a concurrent transaction commits before deletion', a
   const proceed = new Promise((resolve) => { release = resolve; });
   const transaction = prisma.$transaction(async (tx) => {
     await tx.transaction.create({ data: { userId: ids[0], categoryId: category.id, description: 'Concurrent', amount: '1.00', type: 'EXPENSE', date: new Date('2026-01-01') } });
-    inserted();
+    const [{ pid }] = await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+    inserted(pid);
     await proceed;
-  });
-  await ready;
+  }, { timeout: 15000 });
+  const blockerPid = await ready;
   const deletion = api().delete(`/api/categories/${category.id}`).set('Authorization', tokens[0]).then((response) => response);
-  // Start the request while the insert holds the foreign-key lock, then commit it.
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  release();
+  try {
+    const deadline = Date.now() + 5000;
+    let blocked = false;
+    while (Date.now() < deadline && !blocked) {
+      const rows = await prisma.$queryRaw`SELECT 1 FROM pg_stat_activity WHERE ${blockerPid} = ANY(pg_blocking_pids(pid))`;
+      blocked = rows.length > 0;
+      if (!blocked) await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(blocked).toBe(true);
+  } finally {
+    release();
+  }
   await transaction;
   expect((await deletion).status).toBe(409);
 });

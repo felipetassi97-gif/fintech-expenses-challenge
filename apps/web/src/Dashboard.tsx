@@ -1,31 +1,12 @@
 import { useEffect, useState } from "react";
 import "./dashboard.css";
 import { queryString } from "./api";
+import { comparisonRange, dateValue, localToday } from "./dashboard-period";
+import type { PeriodPreset } from "./dashboard-period";
 import type { Dashboard, TransactionPage, User } from "./api";
 import { DashboardTopMetrics, PeriodIndicators } from "./DashboardMetrics";
 import { Heading, State, day, money, useLoad } from "./shared";
 import type { Page } from "./shared";
-
-type PeriodPreset =
-  | "this-month"
-  | "last-month"
-  | "last-30-days"
-  | "last-90-days"
-  | "this-year"
-  | "all-time"
-  | "custom";
-
-function dateValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function localToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
 
 function monthName(date: Date, width: "short" | "long" = "short"): string {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -45,51 +26,6 @@ function fullDate(value: string): string {
 function cents(value: string): number {
   const [whole, fraction = ""] = value.split(".");
   return Number(whole) * 100 + Number((fraction + "00").slice(0, 2));
-}
-
-function clampedMonthDate(year: number, month: number, dayOfMonth: number): Date {
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  return new Date(year, month, Math.min(dayOfMonth, lastDay));
-}
-
-function comparisonRange(
-  preset: PeriodPreset,
-  start: string,
-  end: string,
-): { startDate: string; endDate: string } | null {
-  if (preset === "all-time" || !start || !end) return null;
-  const [startYear, startMonth, startDay] = start.split("-").map(Number);
-  const [endYear, endMonth, endDay] = end.split("-").map(Number);
-  const selectedStart = new Date(startYear, startMonth - 1, startDay);
-
-  if (preset === "this-month") {
-    return {
-      startDate: dateValue(new Date(startYear, startMonth - 2, 1)),
-      endDate: dateValue(clampedMonthDate(startYear, startMonth - 2, endDay)),
-    };
-  }
-  if (preset === "last-month") {
-    const previousMonthStart = new Date(startYear, startMonth - 2, 1);
-    return {
-      startDate: dateValue(previousMonthStart),
-      endDate: dateValue(new Date(startYear, startMonth - 1, 0)),
-    };
-  }
-  if (preset === "this-year") {
-    return {
-      startDate: `${startYear - 1}-01-01`,
-      endDate: dateValue(clampedMonthDate(endYear - 1, endMonth - 1, endDay)),
-    };
-  }
-
-  const duration = Math.round(
-    (Date.UTC(endYear, endMonth - 1, endDay) - Date.UTC(startYear, startMonth - 1, startDay)) / 86_400_000,
-  ) + 1;
-  const previousEnd = new Date(selectedStart);
-  previousEnd.setDate(previousEnd.getDate() - 1);
-  const previousStart = new Date(previousEnd);
-  previousStart.setDate(previousStart.getDate() - duration + 1);
-  return { startDate: dateValue(previousStart), endDate: dateValue(previousEnd) };
 }
 
 function comparisonLabel(start: string, end: string): string {
@@ -364,9 +300,10 @@ export function DashboardView({
   const comparisonTitle = result.data?.comparison
     ? `${periodCaption}: comparação com ${fullDate(result.data.comparison.startDate)} a ${fullDate(result.data.comparison.endDate)}`
     : `${periodCaption}: não há um período anterior comparável para este filtro.`;
-  const balanceLabel = !end || end === dateValue(localToday())
-    ? "Saldo atual"
-    : "Saldo do período";
+  const showCurrentBalance = !end || end === dateValue(localToday());
+  const balanceLabel = showCurrentBalance
+      ? "Saldo atual"
+      : "Saldo do período";
   const colors = ["#1254c8", "#21a7e8", "#16b879"];
   const top = result.data?.topCategories ?? [];
   const topTotal = top.reduce((sum, c) => sum + cents(c.amount), 0);
@@ -427,6 +364,7 @@ export function DashboardView({
           <DashboardTopMetrics
             data={result.data}
             balanceLabel={balanceLabel}
+            balanceValue={showCurrentBalance ? result.data.balance : result.data.balanceAtEnd}
             comparisonCaption={comparisonCaption}
             comparisonTitle={comparisonTitle}
           />

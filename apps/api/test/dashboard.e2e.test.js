@@ -70,6 +70,21 @@ test('optional bounds, empty periods and separate users', async () => {
   expect(other.body).toMatchObject({ balance: '999999999999.99', income: '999999999999.99', expense: '0.00', topCategories: [] });
 });
 
+test('current balance excludes future transactions while historical and selected balances retain them', async () => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const tomorrow = new Date(`${today}T00:00:00.000Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const future = await prisma.transaction.create({ data: {
+    userId: ids[0], categoryId: categoryIds[0], type: 'INCOME', amount: '7.00', date: tomorrow, description: 'Future',
+  } });
+  try {
+    const res = await dashboard().query({ endDate: tomorrow.toISOString().slice(0, 10) }).expect(200);
+    expect(res.body).toMatchObject({ balance: '108.65', historicalBalance: '115.65', balanceAtEnd: '115.65' });
+  } finally {
+    await prisma.transaction.delete({ where: { id: future.id } });
+  }
+});
+
 test('calculates comparison totals, balance through the selected end date and period indicators', async () => {
   const res = await dashboard().query({
     startDate: '2025-02-01',

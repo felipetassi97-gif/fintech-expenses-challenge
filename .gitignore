@@ -164,3 +164,8 @@ vite.config.ts.timestamp-*
 
 # Estudos locais de identidade visual
 /IDVisual/
+
+# Ruflo
+/.claude-flow
+/.ruflo
+/.ruvector

@@ -33,12 +33,22 @@ export function Transactions({
   revision: number;
   onTransactionChanged: () => void;
 }) {
-  const [searchParams] = useSearchParams();
-  const [page, setPage] = useState(1);
-  const [type, setType] = useState(() => searchParams.get("type") || "");
-  const [category, setCategory] = useState(() => searchParams.get("categoryId") || "");
-  const [start, setStart] = useState(() => searchParams.get("startDate") || "");
-  const [end, setEnd] = useState(() => searchParams.get("endDate") || "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const type = searchParams.get("type") || "";
+  const category = searchParams.get("categoryId") || "";
+  const start = searchParams.get("startDate") || "";
+  const end = searchParams.get("endDate") || "";
+  const pageParam = Number(searchParams.get("page"));
+  const page = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  function updateQuery(key: string, value: string | number) {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value === "" || (key === "page" && value === 1)) next.delete(key);
+      else next.set(key, String(value));
+      if (key !== "page") next.delete("page");
+      return next;
+    });
+  }
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
   const list = useLoad<TransactionPage>(
@@ -55,7 +65,7 @@ export function Transactions({
     if (!window.confirm(`Excluir a transação “${item.description}”?`)) return;
     try {
       await request(`/transactions/${item.id}`, { method: "DELETE", token });
-      setPage(1);
+      updateQuery("page", 1);
       onTransactionChanged();
       setMessage("Transação excluída.");
     } catch (err) {
@@ -88,8 +98,7 @@ export function Transactions({
             <select
               value={type}
               onChange={(e) => {
-                setType(e.target.value);
-                setPage(1);
+                updateQuery("type", e.target.value);
               }}
             >
               <option value="">Todos</option>
@@ -102,8 +111,7 @@ export function Transactions({
             <select
               value={category}
               onChange={(e) => {
-                setCategory(e.target.value);
-                setPage(1);
+                updateQuery("categoryId", e.target.value);
               }}
             >
               <option value="">Todas</option>
@@ -118,12 +126,10 @@ export function Transactions({
             start={start}
             end={end}
             setStart={(s) => {
-              setStart(s);
-              setPage(1);
+              updateQuery("startDate", s);
             }}
             setEnd={(s) => {
-              setEnd(s);
-              setPage(1);
+              updateQuery("endDate", s);
             }}
           />
         </div>
@@ -188,14 +194,14 @@ export function Transactions({
                   <button
                     className="button secondary"
                     disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
+                    onClick={() => updateQuery("page", page - 1)}
                   >
                     Anterior
                   </button>{" "}
                   <button
                     className="button secondary"
                     disabled={page >= list.data!.pagination.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
+                    onClick={() => updateQuery("page", page + 1)}
                   >
                     Próxima
                   </button>

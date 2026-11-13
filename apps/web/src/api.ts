@@ -18,6 +18,7 @@ export type MetricChange = {
 };
 export type Dashboard = {
   balance: string;
+  historicalBalance: string;
   balanceAtEnd: string;
   income: string;
   expense: string;

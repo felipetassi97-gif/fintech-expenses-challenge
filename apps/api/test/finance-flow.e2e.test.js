@@ -40,6 +40,6 @@ test('registration through financial operations and dashboard', async () => {
     { categoryId: category.body.id, name: 'Expenses', amount: '10.25' },
   ] });
   await request(server).delete(`/api/categories/${category.body.id}`).set('Authorization', authorization).expect(409);
-  await request(server).delete(`/api/transactions/${transaction.body.id}`).set('Authorization', authorization).expect(200);
+  await request(server).delete(`/api/transactions/${transaction.body.id}`).set('Authorization', authorization).expect(204);
   await request(server).delete(`/api/categories/${category.body.id}`).set('Authorization', authorization).expect(204);
 });

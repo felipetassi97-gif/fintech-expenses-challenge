@@ -3,7 +3,7 @@ import { IsDateString, IsEnum, IsInt, ValidateIf, IsString, IsUUID, Length, Matc
 import { TransactionType } from '@prisma/client';
 
 export class CreateTransactionDto {
-  @IsString() @Length(1, 500) description!: string;
+  @IsString() @Length(1, 500) @Matches(/\S/) description!: string;
   @IsString() @Matches(/^(?=\d{1,12}(?:\.\d{1,2})?$)(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/) amount!: string;
   @IsEnum(TransactionType) type!: TransactionType;
   @IsUUID() categoryId!: string;
@@ -11,7 +11,7 @@ export class CreateTransactionDto {
 }
 
 export class UpdateTransactionDto {
-  @ValidateIf((_object, value: unknown) => value !== undefined) @IsString() @Length(1, 500) description?: string;
+  @ValidateIf((_object, value: unknown) => value !== undefined) @IsString() @Length(1, 500) @Matches(/\S/) description?: string;
   @ValidateIf((_object, value: unknown) => value !== undefined) @IsString() @Matches(/^(?=\d{1,12}(?:\.\d{1,2})?$)(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/) amount?: string;
   @ValidateIf((_object, value: unknown) => value !== undefined) @IsEnum(TransactionType) type?: TransactionType;
   @ValidateIf((_object, value: unknown) => value !== undefined) @IsUUID() categoryId?: string;

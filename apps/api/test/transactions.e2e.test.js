@@ -46,12 +46,13 @@ test('requires authentication and creates a transaction with decimal and date st
 
 test('rejects invalid input and categories belonging to other users', async () => {
   const server = app.getHttpServer();
-  for (const changes of [{ amount: 1 }, { amount: '0' }, { amount: '-1' }, { amount: '1.001' }, { date: '2026-02-30' }, { date: '2026-02-28T00:00:00Z' }, { userId: users[1].id }]) {
+  for (const changes of [{ description: ' \t ' }, { amount: 1 }, { amount: '0' }, { amount: '-1' }, { amount: '1.001' }, { date: '2026-02-30' }, { date: '2026-02-28T00:00:00Z' }, { userId: users[1].id }]) {
     await request(server).post('/api/transactions').set(auth(0)).send(payload(categories[0].id, changes)).expect(400);
   }
   await request(server).post('/api/transactions').set(auth(0)).send(payload(categories[1].id)).expect(404);
   await request(server).patch(`/api/transactions/${transactionId}`).set(auth(0)).send({ categoryId: categories[1].id }).expect(404);
   await request(server).patch(`/api/transactions/${transactionId}`).set(auth(0)).send({ amount: null }).expect(400);
+  await request(server).patch(`/api/transactions/${transactionId}`).set(auth(0)).send({ description: ' \t ' }).expect(400);
 });
 
 test('isolates reads, updates and deletes', async () => {
@@ -85,6 +86,6 @@ test('updates and deletes the owner transaction', async () => {
   const server = app.getHttpServer();
   const updated = await request(server).patch(`/api/transactions/${transactionId}`).set(auth(0)).send({ amount: '99.99', date: '2026-01-01', type: 'INCOME' }).expect(200);
   expect(updated.body).toMatchObject({ amount: '99.99', date: '2026-01-01', type: 'INCOME' });
-  await request(server).delete(`/api/transactions/${transactionId}`).set(auth(0)).expect(200);
+  await request(server).delete(`/api/transactions/${transactionId}`).set(auth(0)).expect(204);
   await request(server).get(`/api/transactions/${transactionId}`).set(auth(0)).expect(404);
 });

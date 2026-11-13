@@ -45,12 +45,15 @@ export class DashboardService {
     const comparisonBalancePeriod = query.comparisonEndDate
       ? { userId, date: { lte: new Date(`${query.comparisonEndDate}T00:00:00.000Z`) } }
       : null;
+    // Transactions are calendar dates; define the business day in São Paulo.
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const currentBalancePeriod = { userId, date: { lte: new Date(`${today}T00:00:00.000Z`) } };
 
     return this.prisma.$transaction(async (db) => {
       if (!await db.user.findUnique({ where: { id: userId }, select: { id: true } })) {
         throw new UnauthorizedException('Invalid token');
       }
-      const [historical, totals, categories, comparisonTotals, endingBalance, comparisonBalance] = await Promise.all([
+      const [historical, totals, categories, comparisonTotals, endingBalance, comparisonBalance, currentBalance] = await Promise.all([
         db.transaction.groupBy({ by: ['type'], where: { userId }, _sum: { amount: true } }),
         db.transaction.groupBy({ by: ['type'], where: period, _sum: { amount: true } }),
         db.transaction.groupBy({
@@ -64,6 +67,7 @@ export class DashboardService {
         comparisonBalancePeriod
           ? db.transaction.groupBy({ by: ['type'], where: comparisonBalancePeriod, _sum: { amount: true } })
           : Promise.resolve([]),
+        db.transaction.groupBy({ by: ['type'], where: currentBalancePeriod, _sum: { amount: true } }),
       ]);
       const amount = (rows: typeof historical, type: TransactionType) =>
         rows.find((row) => row.type === type)?._sum.amount ?? new Prisma.Decimal(0);
@@ -100,7 +104,8 @@ export class DashboardService {
       const incomeGrowth = change(income, comparisonIncome);
       const expenseVariation = change(expense, comparisonExpense);
       return {
-        balance: balanceFrom(historical).toFixed(2),
+        balance: balanceFrom(currentBalance).toFixed(2),
+        historicalBalance: balanceFrom(historical).toFixed(2),
         balanceAtEnd: balanceAtEnd.toFixed(2),
         income: income.toFixed(2),
         expense: expense.toFixed(2),

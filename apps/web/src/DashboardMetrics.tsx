@@ -170,18 +170,20 @@ function IndicatorHelp({ label, text }: { label: string; text: string }) {
 export function DashboardTopMetrics({
   data,
   balanceLabel,
+  balanceValue,
   comparisonCaption,
   comparisonTitle,
 }: {
   data: Dashboard;
   balanceLabel: string;
+  balanceValue: string;
   comparisonCaption: string;
   comparisonTitle: string;
 }) {
   return (
     <div className="metrics">
       {([
-        { kind: "balance", label: balanceLabel, value: data.balanceAtEnd },
+        { kind: "balance", label: balanceLabel, value: balanceValue },
         { kind: "income", label: "Entradas", value: data.income },
         { kind: "expense", label: "Despesas", value: data.expense },
       ] as const).map(({ kind, label, value }) => (

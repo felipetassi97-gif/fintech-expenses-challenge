@@ -2,6 +2,9 @@
 
 Aplicação para registrar e acompanhar receitas e despesas por categoria, com dados separados por usuário. A API e a interface compartilham este repositório e são executadas de forma independente.
 
+- Aplicação pública: https://fintech-expenses-challenge.netlify.app
+- Repositório: https://github.com/felipetassi97-gif/fintech-expenses-challenge
+
 ## Escopo
 
 O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A interface React consome a API para autenticação, operações de categorias e transações e consulta dos indicadores.
@@ -79,11 +82,11 @@ As rotas abaixo exigem `Authorization: Bearer <token>`. Cada usuário acessa ape
 
 - `GET` e `POST /api/categories`; `GET`, `PATCH` e `DELETE /api/categories/:id`. A exclusão de categoria vinculada a transações retorna 409.
 - `GET` e `POST /api/transactions`; `GET`, `PATCH` e `DELETE /api/transactions/:id`. A listagem aceita `type`, `categoryId`, `startDate`, `endDate`, `page` e `limit` e retorna `data` e `pagination`.
-- `GET /api/dashboard` aceita `startDate`, `endDate`, `comparisonStartDate` e `comparisonEndDate`. Retorna o saldo histórico (`balance`), o saldo até o fim do intervalo (`balanceAtEnd`), entradas, despesas, as três categorias de maior volume e os indicadores calculados no backend. Os dois limites de comparação devem ser informados juntos e precisam anteceder o período selecionado.
+- `GET /api/dashboard` aceita `startDate`, `endDate`, `comparisonStartDate` e `comparisonEndDate`. Retorna o saldo atual até a data de hoje no fuso `America/Sao_Paulo` (`balance`), o saldo de todas as transações, inclusive futuras (`historicalBalance`), o saldo até o fim do intervalo (`balanceAtEnd`), entradas, despesas, as três categorias de maior volume e os indicadores calculados no backend. Os dois limites de comparação devem ser informados juntos e precisam anteceder o período selecionado.
 
 Datas usam `YYYY-MM-DD`, com limites inclusivos. Valores monetários são strings decimais com até duas casas, como `"120.50"`; os valores de transação devem ser positivos. O frontend compara o intervalo selecionado com o período anterior equivalente e a API calcula as variações percentuais e as diferenças monetárias absolutas (`amountDifference`). Quando não existe período anterior (como em todo o histórico), ou quando a base anterior é zero, a resposta sinaliza que não há percentual disponível em vez de exibir uma variação enganosa.
 
-Os indicadores do período seguem estas fórmulas: crescimento das entradas e variação das despesas comparam os totais dos dois períodos; participação operacional é o total de despesas dividido pelo total de entradas; resultado do período é entradas menos despesas. A participação fica indisponível quando não houve entradas. O saldo exibido acompanha a data final selecionada, e `balance` continua disponível como saldo de todo o histórico.
+Os indicadores do período seguem estas fórmulas: crescimento das entradas e variação das despesas comparam os totais dos dois períodos; participação operacional é o total de despesas dividido pelo total de entradas; resultado do período é entradas menos despesas. A participação fica indisponível quando não houve entradas. O saldo exibido acompanha a data final selecionada; sem data final, apresenta o saldo atual. Os períodos rápidos consideram a data corrente no fuso `America/Sao_Paulo`, igual ao cálculo do saldo atual na API.
 
 ## Verificações
 
@@ -95,4 +98,4 @@ DIRECT_URL="$TEST_DATABASE_URL" DATABASE_URL="$TEST_DATABASE_URL" npm run prisma
 npm run test -w @fintech/api
 ```
 
-Os testes criam e removem seus próprios dados; não use banco de produção. Ainda não há demonstração pública disponível.
+Os testes criam e removem seus próprios dados; não use banco de produção. É possível criar uma conta pela interface para experimentar a aplicação.

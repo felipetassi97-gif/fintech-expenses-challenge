@@ -40,7 +40,7 @@ export class TransactionsService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.transaction.findMany({ where, orderBy: [{ date: 'desc' }, { id: 'desc' }], skip: (query.page - 1) * query.limit, take: query.limit }),
       this.prisma.transaction.count({ where }),
-    ]);
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
     return { data: items.map(item => this.format(item)), pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } };
   }
 
@@ -68,6 +68,5 @@ export class TransactionsService {
     if (!isUUID(id)) throw new NotFoundException('Transaction not found');
     const result = await this.prisma.transaction.deleteMany({ where: { id, userId } });
     if (!result.count) throw new NotFoundException('Transaction not found');
-    return { deleted: true };
   }
 }
