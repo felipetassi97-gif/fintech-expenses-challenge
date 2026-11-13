@@ -157,5 +157,10 @@ vite.config.ts.timestamp-*
 # Checklist local de acompanhamento do desafio
 /checklist.md
 
+# Apoio exclusivo do ambiente local
+/compose.yaml
+/apps/api/prisma/seed.local.sql
+/apps/web/vite.config.ts
+
 # Estudos locais de identidade visual
 /IDVisual/

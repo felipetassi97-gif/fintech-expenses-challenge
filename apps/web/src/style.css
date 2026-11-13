@@ -2,11 +2,11 @@
 :root {
   font-family: Inter, system-ui, sans-serif;
   color: #111c33;
-  background: #f5f8fc;
+  background: #f3f7fd;
   font-synthesis: none;
-  --navy: #0b1f3a;
-  --blue: #1254c8;
-  --border: #dce5f0;
+  --navy: #071b35;
+  --blue: #1259d6;
+  --border: #dce7f5;
   --muted: #64748b;
   --surface: #fff;
   --green: #087d51;
@@ -184,6 +184,7 @@ textarea {
   gap: 6px;
 }
 .nav-item {
+  text-decoration: none;
   width: 100%;
   border: 0;
   background: transparent;
@@ -420,10 +421,10 @@ textarea {
 }
 .panel {
   background: #fff;
-  border: 1px solid #dce5f0;
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 5px 20px #18345108;
+  box-shadow: 0 12px 34px rgba(13, 44, 77, 0.055), 0 2px 8px rgba(13, 44, 77, 0.025);
 }
 .section-head {
   display: flex;

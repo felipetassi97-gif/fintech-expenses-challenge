@@ -18,9 +18,11 @@ export const errorText = (error: unknown) =>
 export function Brand() {
   return (
     <div className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        ▰<br />▰
-      </span>
+      <svg className="brand-mark" aria-hidden="true" viewBox="0 0 48 48" fill="none">
+        <path d="M5 13.5 14.5 4H43L33.5 13.5H18L9 22.5H5v-9Z" fill="#18A6EA" />
+        <path d="M10 26.5 22 14.5H35L16.5 33H10v-6.5Z" fill="#5BC9F4" />
+        <path d="M10 34.5h6.5L10 41v-6.5Z" fill="#2589D6" />
+      </svg>
       <span>
         Gestão<span className="brand-sub">financeira</span>
       </span>

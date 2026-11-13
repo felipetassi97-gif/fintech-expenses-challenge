@@ -1,9 +1,12 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError, request } from "./api";
 import { Brand, errorText } from "./shared";
 export function Auth({ onLogin }: { onLogin: (token: string) => void }) {
-  const [register, setRegister] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const register = location.pathname === "/register";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +30,7 @@ export function Auth({ onLogin }: { onLogin: (token: string) => void }) {
       onLogin(result.accessToken);
     } catch (err) {
       if (accountCreated) {
-        setRegister(false);
+        navigate("/login");
         setError(
           "Conta criada, mas não foi possível iniciar a sessão. Entre com seu e-mail e senha.",
         );
@@ -132,7 +135,7 @@ export function Auth({ onLogin }: { onLogin: (token: string) => void }) {
               type="button"
               className="link"
               onClick={() => {
-                setRegister(!register);
+                navigate(register ? "/login" : "/register");
                 setError("");
               }}
             >

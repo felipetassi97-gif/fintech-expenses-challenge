@@ -1,82 +1,136 @@
-import { useCallback, useEffect, useState } from "react";
-import { ApiError, request } from "./api";
-import type { User } from "./api";
+import { useEffect, useState } from "react";
+import {
+  HashRouter,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
+import type { Category, User } from "./api";
 import { Auth } from "./Auth";
-import { Brand } from "./shared";
-import type { Page } from "./shared";
-import { DashboardView } from "./Dashboard";
 import { Categories } from "./Categories";
+import { DashboardView } from "./Dashboard";
+import { SessionProvider, useSession } from "./Session";
+import { TransactionEditor } from "./TransactionEditor";
 import { Transactions } from "./Transactions";
-const tokenKey = "finance_session";
-function currentPage(): Page {
-  const page = window.location.hash.slice(1);
-  return page === "transactions" || page === "categories" ? page : "dashboard";
-}
-export function App() {
-  const [token, setToken] = useState(
-    () => sessionStorage.getItem(tokenKey) || "",
+import { Brand, useLoad } from "./shared";
+import type { Page } from "./shared";
+import "./shell.css";
+
+function NavIcon({ page }: { page: Page }) {
+  return (
+    <svg
+      className="nav-icon"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {page === "dashboard" ? (
+        <>
+          <path d="M3.5 10.5 12 3l8.5 7.5" />
+          <path d="M5.5 9.5V20h13V9.5M9.5 20v-6h5v6" />
+        </>
+      ) : page === "transactions" ? (
+        <>
+          <path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4" />
+        </>
+      ) : (
+        <>
+          <path d="M4 4h7l9 9-7 7-9-9V4Z" />
+          <circle cx="8" cy="8" r="1" />
+        </>
+      )}
+    </svg>
   );
-  const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!!token);
-  const [page, updatePage] = useState<Page>(currentPage);
-  const [notice, setNotice] = useState("");
-  const setPage = useCallback((next: Page) => {
-    window.location.hash = next;
-    updatePage(next);
-  }, []);
+}
+
+function PublicAuth() {
+  const { user, token, login, notice } = useSession();
+  if (user && token) return <Navigate to="/dashboard" replace />;
+  return (
+    <>
+      <Auth onLogin={login} />
+      {notice && (
+        <div role="alert" className="toast">
+          {notice}
+        </div>
+      )}
+    </>
+  );
+}
+
+function Workspace() {
+  const { user, token, logout } = useSession();
+  const navigate = useNavigate();
+  if (!user || !token) return <Navigate to="/login" replace />;
+
+  const setPage = (page: Page, search = "") => navigate(`/${page}${search}`);
+  return (
+    <AuthenticatedWorkspace
+      user={user}
+      token={token}
+      logout={logout}
+      setPage={setPage}
+    />
+  );
+}
+
+function AuthenticatedWorkspace({
+  user,
+  token,
+  logout,
+  setPage,
+}: {
+  user: User;
+  token: string;
+  logout: () => void;
+  setPage: (page: Page, search?: string) => void;
+}) {
+  const [categoryRevision, setCategoryRevision] = useState(0);
+  const categories = useLoad<Category[]>(
+    "/categories",
+    token,
+    logout,
+    categoryRevision,
+  );
+  const [transactionRevision, setTransactionRevision] = useState(0);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [saveNotice, setSaveNotice] = useState("");
+
   useEffect(() => {
-    const syncPage = () => updatePage(currentPage());
-    window.addEventListener("hashchange", syncPage);
-    return () => window.removeEventListener("hashchange", syncPage);
-  }, []);
-  const logout = useCallback(() => {
-    sessionStorage.removeItem(tokenKey);
-    setToken("");
-    setUser(null);
-    setChecking(false);
-  }, []);
-  useEffect(() => {
-    if (!token) return;
-    let active = true;
-    request<User>("/auth/me", { token })
-      .then((u) => {
-        if (active) {
-          setUser(u);
-          setChecking(false);
-        }
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (err instanceof ApiError && err.status === 401) logout();
-        else {
-          setNotice(
-            "Não foi possível recuperar sua sessão. Tente entrar novamente.",
-          );
-          logout();
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [token, logout]);
-  if (checking) return <div className="center">Carregando sua sessão...</div>;
-  if (!user || !token)
-    return (
-      <>
-        <Auth
-          onLogin={(t) => {
-            sessionStorage.setItem(tokenKey, t);
-            setChecking(true);
-            setToken(t);
-          }}
-        />
-        {notice && (
-          <div role="alert" className="toast">
-            {notice}
-          </div>
-        )}
-      </>
-    );
+    if (!saveNotice) return;
+    const timeout = window.setTimeout(() => setSaveNotice(""), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [saveNotice]);
+
+  function transactionsChanged() {
+    setTransactionRevision((revision) => revision + 1);
+  }
+
+  function transactionSaved() {
+    transactionsChanged();
+    setSaveNotice("Transação salva com sucesso.");
+  }
+
+  function categoriesChanged() {
+    setCategoryRevision((revision) => revision + 1);
+  }
+
+  const initials = user.name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part, index, parts) =>
+      index === 0 || index === parts.length - 1 ? part[0] : "",
+    )
+    .join("")
+    .toUpperCase();
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -85,33 +139,46 @@ export function App() {
         <nav aria-label="Navegação principal">
           {(
             [
-              ["dashboard", "◫", "Visão geral"],
-              ["transactions", "⇄", "Transações"],
-              ["categories", "◇", "Categorias"],
+              ["dashboard", "Visão geral"],
+              ["transactions", "Transações"],
+              ["categories", "Categorias"],
             ] as const
-          ).map(([key, icon, label]) => (
-            <button
+          ).map(([key, label]) => (
+            <NavLink
               key={key}
-              className={`nav-item ${page === key ? "active" : ""}`}
-              aria-current={page === key ? "page" : undefined}
-              onClick={() => setPage(key)}
+              to={`/${key}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
-              <span aria-hidden="true">{icon}</span>
-              {label}
-            </button>
+              <NavIcon page={key} />
+              <span>{label}</span>
+            </NavLink>
           ))}
         </nav>
         <div className="sidebar-foot">
-          GESTÃO FINANCEIRA <span>Seu controle começa aqui.</span>
+          <span className="sidebar-foot-title">GESTÃO FINANCEIRA</span>
+          <span>Seu controle começa aqui.</span>
         </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <span className="top-title">Seu espaço financeiro</span>
-          <div className="user">
-            <span className="avatar">
-              {user.name.slice(0, 1).toUpperCase()}
+          <div className="top-context">
+            <span className="top-context-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                <rect x="3" y="6" width="18" height="13" rx="3" />
+                <path d="M3 10h18M16 15h2" />
+              </svg>
             </span>
+            <span className="top-title">Seu espaço financeiro</span>
+          </div>
+          <div className="user">
+            <span className="avatar">{initials}</span>
             <div>
               <strong>{user.name}</strong>
               <small>{user.email}</small>
@@ -122,22 +189,108 @@ export function App() {
           </div>
         </header>
         <main className="content">
-          {page === "dashboard" && (
-            <DashboardView
-              token={token}
-              user={user}
-              navigate={setPage}
-              logout={logout}
+          {saveNotice && (
+            <p className="transaction-toast" role="status" aria-live="polite">
+              {saveNotice}
+            </p>
+          )}
+          <Routes>
+            <Route
+              path="/dashboard"
+              element={
+                <DashboardView
+                  token={token}
+                  user={user}
+                  navigate={setPage}
+                  logout={logout}
+                  revision={transactionRevision}
+                />
+              }
             />
-          )}
-          {page === "transactions" && (
-            <Transactions token={token} logout={logout} />
-          )}
-          {page === "categories" && (
-            <Categories token={token} logout={logout} />
-          )}
+            <Route
+              path="/transactions"
+              element={
+                <Transactions
+                  token={token}
+                  logout={logout}
+                  categories={categories.data}
+                  categoriesLoading={categories.loading}
+                  categoriesError={categories.error}
+                  revision={transactionRevision}
+                  onTransactionChanged={transactionsChanged}
+                />
+              }
+            />
+            <Route
+              path="/categories"
+              element={
+                <Categories
+                  token={token}
+                  logout={logout}
+                  data={categories.data}
+                  loading={categories.loading}
+                  error={categories.error}
+                  onCategoriesChanged={categoriesChanged}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </main>
+        {quickAddOpen && (
+          <TransactionEditor
+            item="new"
+            token={token}
+            logout={logout}
+            categories={categories.data}
+            categoriesLoading={categories.loading}
+            categoriesError={categories.error}
+            onClose={() => setQuickAddOpen(false)}
+            onSaved={transactionSaved}
+          />
+        )}
+        <button
+          className="quick-add-fab"
+          type="button"
+          aria-label="Adicionar transação"
+          aria-haspopup="dialog"
+          title="Adicionar transação"
+          onClick={() => setQuickAddOpen(true)}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
       </div>
     </div>
+  );
+}
+
+function AppRoutes() {
+  const { checking } = useSession();
+  if (checking) return <div className="center">Carregando sua sessão...</div>;
+  return (
+    <Routes>
+      <Route path="/login" element={<PublicAuth />} />
+      <Route path="/register" element={<PublicAuth />} />
+      <Route path="*" element={<Workspace />} />
+    </Routes>
+  );
+}
+
+export function App() {
+  return (
+    <HashRouter>
+      <SessionProvider>
+        <AppRoutes />
+      </SessionProvider>
+    </HashRouter>
   );
 }

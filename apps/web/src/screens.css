@@ -1,0 +1,162 @@
+/* Authentication and workspaces share the same visual language as the dashboard. */
+.auth {
+  background: #f3f7fc;
+}
+.auth-aside {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(150deg, #081a32 0%, #0c294b 64%, #113a64 100%);
+}
+.auth-aside::before,
+.auth-aside::after {
+  content: "";
+  position: absolute;
+  width: 530px;
+  height: 530px;
+  border: 1px solid #44b8f231;
+  border-radius: 46%;
+  right: -260px;
+  bottom: -320px;
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+.auth-aside::after {
+  width: 650px;
+  height: 650px;
+  right: -340px;
+  bottom: -410px;
+  border-color: #44b8f21c;
+}
+.auth-message { position: relative; z-index: 1; }
+.auth-message .eyebrow { color: #72c9f4; }
+.auth-message h1 { letter-spacing: -.045em; max-width: 460px; }
+.auth-message p { line-height: 1.7; max-width: 410px; }
+.auth-lines { gap: 12px; }
+.auth-lines span {
+  flex: 1;
+  padding: 14px 12px;
+  border: 1px solid #a7cdee24;
+  border-radius: 12px;
+  background: #ffffff09;
+}
+.auth-main {
+  background: radial-gradient(circle at 75% 15%, #dcecfb 0, transparent 35%), #f3f7fc;
+}
+.auth-card {
+  width: min(460px, 100%);
+  padding: 42px;
+  border: 1px solid #dbe6f2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px #12365b12, 0 3px 10px #12365b08;
+}
+.auth-card h2 { color: #0c1d38; letter-spacing: -.035em; }
+.auth-card > p { line-height: 1.55; }
+.auth-card label { gap: 8px; }
+.auth-card input,
+.dialog input,
+.dialog select,
+.dialog textarea,
+.workspace-panel select,
+.workspace-panel input {
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.auth-card input:hover,
+.dialog input:hover,
+.dialog select:hover,
+.dialog textarea:hover,
+.workspace-panel select:hover,
+.workspace-panel input:hover { border-color: #9cb8d6; }
+.auth-card input:focus,
+.dialog input:focus,
+.dialog select:focus,
+.dialog textarea:focus,
+.workspace-panel select:focus,
+.workspace-panel input:focus { box-shadow: 0 0 0 4px #1254c817; }
+.auth-card .primary,
+.content .page-heading .primary,
+.dialog .primary {
+  box-shadow: 0 5px 12px #1254c827;
+  transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.auth-card .primary:hover:not(:disabled),
+.content .page-heading .primary:hover:not(:disabled),
+.dialog .primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px #1254c836;
+}
+.auth-card .primary:active:not(:disabled),
+.content .page-heading .primary:active:not(:disabled),
+.dialog .primary:active:not(:disabled) { transform: translateY(0); }
+.workspace-panel {
+  border-color: #d8e4f1;
+  border-radius: 16px;
+  box-shadow: 0 10px 32px #173b6010, 0 2px 6px #173b6006;
+}
+.workspace-panel .section-head h2 { color: #101f3a; }
+.workspace-panel .filters {
+  gap: 16px;
+  margin: 0 0 8px;
+  padding: 20px 0;
+  border-color: #e7edf5;
+}
+.workspace-panel .filters select,
+.workspace-panel .date-filters input { min-height: 42px; }
+.workspace-panel .table-wrap { border-radius: 10px; }
+.workspace-panel th {
+  background: #f5f8fc;
+  color: #627794;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+.workspace-panel th:first-child { border-radius: 8px 0 0 8px; }
+.workspace-panel th:last-child { border-radius: 0 8px 8px 0; }
+.workspace-panel td { border-color: #eaf0f6; }
+.workspace-panel tbody tr { transition: background-color .16s ease; }
+.workspace-panel tbody tr:hover { background: #f4f9ff; }
+.workspace-panel td strong { color: #172a46; }
+.workspace-panel .actions button {
+  border-radius: 7px;
+  padding: 7px 9px;
+  margin-right: 3px;
+  transition: color .16s ease, background-color .16s ease;
+}
+.workspace-panel .actions button:hover { background: #eaf3ff; color: #0a449f; }
+.workspace-panel .actions button:last-child:hover { color: #b62632; background: #fff0f1; }
+.workspace-panel .badge { display: inline-flex; align-items: center; padding: 6px 10px; }
+.workspace-panel .pagination { padding-top: 22px; }
+.workspace-panel .pagination .button { min-height: 40px; }
+.dialog {
+  border: 1px solid #d7e4f2;
+  border-radius: 18px;
+  box-shadow: 0 26px 80px #07182e45;
+}
+.dialog::backdrop { background: #06172ca6; backdrop-filter: blur(3px); }
+.dialog h2 { font-size: 22px; color: #10213d; }
+.dialog > p { line-height: 1.55; }
+.dialog .secondary { transition: background-color .18s ease, border-color .18s ease; }
+.dialog .secondary:hover { border-color: #9bb7d4; }
+@media (max-width: 760px) {
+  .auth-main { background: #f3f7fc; }
+  .auth-card { max-width: 460px; padding: 32px; }
+}
+@media (max-width: 440px) {
+  .auth-main { padding: 18px; }
+  .auth-card { padding: 24px; border-radius: 16px; }
+  .auth-card .mobile-brand { margin: -24px -24px 12px; border-radius: 15px 15px 0 0; }
+  .workspace-panel { padding: 18px; }
+  .workspace-panel .filters > label { flex: 1; min-width: 125px; }
+  .workspace-panel .actions button { padding: 8px; }
+  .dialog { padding: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-card .primary,
+  .content .page-heading .primary,
+  .dialog .primary,
+  .workspace-panel tbody tr,
+  .workspace-panel .actions button { transition: none; }
+  .auth-card .primary:hover:not(:disabled),
+  .content .page-heading .primary:hover:not(:disabled),
+  .dialog .primary:hover:not(:disabled) { transform: none; }
+}

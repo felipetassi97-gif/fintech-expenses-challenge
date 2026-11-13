@@ -16,17 +16,15 @@ O sistema contempla autenticação, gestão de categorias, transações financei
 
 Requisitos: Node.js 24.15 ou superior na linha 24, npm e PostgreSQL.
 
-Na raiz do repositório, instale as dependências e prepare as variáveis de ambiente:
+Na raiz do repositório, instale as dependências e crie os arquivos de ambiente apenas se ainda não existirem:
 
 ```bash
 npm install
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+cp -n apps/api/.env.example apps/api/.env
+cp -n apps/web/.env.example apps/web/.env
 ```
 
-Em `apps/api/.env`, ajuste `DATABASE_URL` para o banco local e defina `JWT_SECRET`. `PORT` configura a porta da API. Em `apps/web/.env`, `VITE_API_URL` indica a URL da API usada pela interface.
-
-`CORS_ORIGINS` define as origens permitidas para o frontend, separadas por vírgula. O padrão atende ao Vite local nas portas e endereços indicados no arquivo de exemplo; configure as origens reais antes de publicar.
+Em `apps/api/.env`, configure `DATABASE_URL` para o PostgreSQL local e substitua `JWT_SECRET` por um valor aleatório, por exemplo, gerado com `openssl rand -hex 32`. `PORT` define a porta da API. Em `apps/web/.env`, `VITE_API_URL` aponta para a API. `CORS_ORIGINS` lista as origens do frontend separadas por vírgula; o exemplo inclui os endereços padrão do Vite.
 
 Gere o cliente Prisma e aplique as migrations:
 
@@ -35,14 +33,29 @@ npm run prisma:generate -w @fintech/api
 npm run prisma:deploy -w @fintech/api
 ```
 
-Inicie a API e a interface em terminais separados:
+Inicie a API e o frontend em terminais separados:
 
 ```bash
 npm run dev:api
 npm run dev:web
 ```
 
-Para criar migrations durante o desenvolvimento, use `npm run prisma:migrate -w @fintech/api`.
+Abra o endereço informado pelo Vite e crie uma conta pela interface. Para criar migrations durante o desenvolvimento, use `npm run prisma:migrate -w @fintech/api`.
+
+## Banco PostgreSQL para a demonstração pública (Neon Free)
+
+O desafio exige PostgreSQL e migrations, sem exigir um provedor pago. Para a demonstração, use um projeto PostgreSQL no plano gratuito do Neon. O código da API já usa uma URL PostgreSQL padrão por `DATABASE_URL`.
+
+No painel do Neon, copie as duas URLs de conexão:
+
+- Configure a URL **pooled** (host com `-pooler`) como `DATABASE_URL`. A API NestJS usa essa URL em runtime.
+- Configure a URL **direct** (host sem `-pooler`) como `DIRECT_URL`. O Prisma CLI usa essa URL para migrations.
+
+Mantenha os parâmetros TLS fornecidos pelo Neon, incluindo `sslmode=require`. Configure ambas as variáveis e `JWT_SECRET`, `PORT` e `CORS_ORIGINS` somente no serviço da API. O frontend recebe apenas `VITE_API_URL`; nunca exponha credenciais do banco no Vite ou no repositório.
+
+Antes de liberar a API, aplique as migrations versionadas com `npm run prisma:deploy -w @fintech/api`, usando `DIRECT_URL`. Para alterações de esquema, crie e versione uma migration em um ambiente de desenvolvimento e aplique-a no banco público com `prisma:deploy`; não use `migrate dev` no banco da demonstração.
+
+Mantenha os testes em um banco isolado e os dados públicos fictícios. A suíte e2e cria e remove registros, então `TEST_DATABASE_URL` nunca deve apontar para o banco Neon usado pela demonstração. O plano gratuito é adequado à avaliação, mas sua janela de recuperação é curta; não use esta instância para dados financeiros reais.
 
 ## Decisões técnicas
 
@@ -50,7 +63,7 @@ O PostgreSQL armazena valores monetários como `Decimal(14,2)` e datas sem horá
 
 A autenticação usa bcrypt para armazenar senhas como hashes e JWT com validade de uma hora. A API está organizada por responsabilidade em módulos NestJS. O monorepo mantém API e interface próximas, com dependências e execução independentes.
 
-No frontend, as telas mantêm estado local com hooks do React porque os fluxos são independentes e não precisam de um store global. Uma camada Fetch centraliza URL, autenticação, serialização e mensagens de erro para manter as páginas focadas na interface e nas ações do usuário.
+No frontend, React Router usa rotas por hash para funcionar em hospedagem estática. A Context API compartilha a sessão e o usuário autenticado entre as rotas, enquanto as telas mantêm seus formulários e filtros em estado local; essa divisão evita um store global para dados que não são compartilhados. Uma camada Fetch centraliza URL, autenticação, serialização e mensagens de erro para manter as páginas focadas na interface e nas ações do usuário.
 
 ## Autenticação
 
@@ -66,13 +79,11 @@ As rotas abaixo exigem `Authorization: Bearer <token>`. Cada usuário acessa ape
 
 - `GET` e `POST /api/categories`; `GET`, `PATCH` e `DELETE /api/categories/:id`. A exclusão de categoria vinculada a transações retorna 409.
 - `GET` e `POST /api/transactions`; `GET`, `PATCH` e `DELETE /api/transactions/:id`. A listagem aceita `type`, `categoryId`, `startDate`, `endDate`, `page` e `limit` e retorna `data` e `pagination`.
-- `GET /api/dashboard` aceita `startDate` e `endDate` e retorna `balance`, `income`, `expense` e `topCategories`. O saldo considera todo o histórico; os demais indicadores consideram o período informado.
+- `GET /api/dashboard` aceita `startDate`, `endDate`, `comparisonStartDate` e `comparisonEndDate`. Retorna o saldo histórico (`balance`), o saldo até o fim do intervalo (`balanceAtEnd`), entradas, despesas, as três categorias de maior volume e os indicadores calculados no backend. Os dois limites de comparação devem ser informados juntos e precisam anteceder o período selecionado.
 
-Datas usam `YYYY-MM-DD`, com limites inclusivos. Valores monetários são strings decimais com até duas casas, como `"120.50"`; os valores de transação devem ser positivos. Sem filtro de período, os indicadores consideram todo o histórico.
+Datas usam `YYYY-MM-DD`, com limites inclusivos. Valores monetários são strings decimais com até duas casas, como `"120.50"`; os valores de transação devem ser positivos. O frontend compara o intervalo selecionado com o período anterior equivalente e a API calcula as variações percentuais e as diferenças monetárias absolutas (`amountDifference`). Quando não existe período anterior (como em todo o histórico), ou quando a base anterior é zero, a resposta sinaliza que não há percentual disponível em vez de exibir uma variação enganosa.
 
-### Diagnóstico de cadastro e login local
-
-Cadastro e login exigem PostgreSQL ativo, migrations aplicadas e API executando. Crie `apps/api/.env` e `apps/web/.env` a partir dos arquivos `.env.example`; ajuste `DATABASE_URL`, gere um `JWT_SECRET` aleatório e mantenha `VITE_API_URL` apontando para a API. Depois execute `npm run prisma:deploy -w @fintech/api`, inicie `npm run dev:api` e `npm run dev:web` em terminais separados e abra o endereço informado pelo Vite. O frontend informa quando a API não responde ou quando a origem precisa ser liberada em `CORS_ORIGINS`.
+Os indicadores do período seguem estas fórmulas: crescimento das entradas e variação das despesas comparam os totais dos dois períodos; participação operacional é o total de despesas dividido pelo total de entradas; resultado do período é entradas menos despesas. A participação fica indisponível quando não houve entradas. O saldo exibido acompanha a data final selecionada, e `balance` continua disponível como saldo de todo o histórico.
 
 ## Verificações
 
@@ -80,7 +91,7 @@ Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Os testes
 
 ```bash
 export TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/fintech_test?schema=public'
-DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:deploy -w @fintech/api
+DIRECT_URL="$TEST_DATABASE_URL" DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:deploy -w @fintech/api
 npm run test -w @fintech/api
 ```
 

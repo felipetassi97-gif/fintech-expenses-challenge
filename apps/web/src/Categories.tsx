@@ -2,21 +2,22 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, request } from "./api";
 import type { Category } from "./api";
-import { Heading, Modal, State, errorText, useLoad } from "./shared";
+import { Heading, Modal, State, errorText } from "./shared";
 export function Categories({
   token,
   logout,
+  data,
+  loading,
+  error,
+  onCategoriesChanged,
 }: {
   token: string;
   logout: () => void;
+  data: Category[] | null;
+  loading: boolean;
+  error: string;
+  onCategoriesChanged: () => void;
 }) {
-  const [revision, setRevision] = useState(0);
-  const { data, loading, error } = useLoad<Category[]>(
-    "/categories",
-    token,
-    logout,
-    revision,
-  );
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -43,7 +44,7 @@ export function Categories({
         },
       );
       setEditing(null);
-      setRevision((n) => n + 1);
+      onCategoriesChanged();
       setMessage("Categoria salva com sucesso.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) logout();
@@ -58,7 +59,7 @@ export function Categories({
     if (!window.confirm(`Excluir a categoria “${c.name}”?`)) return;
     try {
       await request(`/categories/${c.id}`, { method: "DELETE", token });
-      setRevision((n) => n + 1);
+      onCategoriesChanged();
       setMessage("Categoria excluída.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) logout();
@@ -82,7 +83,7 @@ export function Categories({
           {message}
         </p>
       )}
-      <section className="panel">
+      <section className="panel workspace-panel">
         <div className="section-head">
           <div>
             <h2>Suas categorias</h2>
