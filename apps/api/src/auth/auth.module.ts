@@ -13,6 +13,6 @@ import { AuthService } from './auth.service';
   } })],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard],
-  exports: [AuthGuard, JwtModule],
+  exports: [AuthGuard, JwtModule, UsersModule],
 })
 export class AuthModule {}

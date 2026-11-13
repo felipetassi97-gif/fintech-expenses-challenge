@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, request } from "./api";
 import type { Category } from "./api";
+import type { WriteOperation } from "./write-operation";
 import { Heading, Modal, State, errorText } from "./shared";
 export function Categories({
   token,
@@ -9,21 +10,28 @@ export function Categories({
   data,
   loading,
   error,
-  onCategoriesChanged,
+  write,
 }: {
   token: string;
   logout: () => void;
   data: Category[] | null;
   loading: boolean;
   error: string;
-  onCategoriesChanged: () => void;
+  write: WriteOperation;
 }) {
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const busy = write.busy;
+  const operation = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   function edit(c: Category | "new") {
+    if (operation.current || busy) return;
     setEditing(c);
     setName(c === "new" ? "" : c.name);
     setDescription(c === "new" ? "" : c.description || "");
@@ -31,9 +39,10 @@ export function Categories({
   }
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (!editing) return;
-    setBusy(true);
+    if (!editing || operation.current || !write.start()) return;
+    operation.current = true;
     setMessage("");
+    let changed: "categories" | null = null;
     try {
       await request(
         editing === "new" ? "/categories" : `/categories/${editing.id}`,
@@ -43,27 +52,35 @@ export function Categories({
           body: { name: name.trim(), description: description.trim() || null },
         },
       );
-      setEditing(null);
-      onCategoriesChanged();
-      setMessage("Categoria salva com sucesso.");
+      changed = "categories";
+      if (mounted.current) {
+        setEditing(null);
+        setMessage("Categoria salva com sucesso.");
+      }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) logout();
-      else if (err instanceof ApiError && err.status === 409)
-        setMessage("Esta categoria possui transações e não pode ser excluída.");
-      else setMessage(errorText(err));
+      if (err instanceof ApiError && err.status === 401 && write.isActive()) logout();
+      else if (mounted.current) setMessage(errorText(err));
     } finally {
-      setBusy(false);
+      operation.current = false;
+      write.finish(changed);
     }
   }
   async function remove(c: Category) {
+    if (operation.current || busy) return;
     if (!window.confirm(`Excluir a categoria “${c.name}”?`)) return;
+    if (!write.start()) return;
+    operation.current = true;
+    let changed: "categories" | null = null;
     try {
       await request(`/categories/${c.id}`, { method: "DELETE", token });
-      onCategoriesChanged();
-      setMessage("Categoria excluída.");
+      changed = "categories";
+      if (mounted.current) setMessage("Categoria excluída.");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) logout();
-      else setMessage(errorText(err));
+      if (err instanceof ApiError && err.status === 401 && write.isActive()) logout();
+      else if (mounted.current) setMessage(errorText(err));
+    } finally {
+      operation.current = false;
+      write.finish(changed);
     }
   }
   return (
@@ -73,7 +90,7 @@ export function Categories({
         title="Categorias"
         description="Organize suas movimentações da maneira que faz sentido para você."
         action={
-          <button className="button primary" onClick={() => edit("new")}>
+          <button className="button primary" onClick={() => edit("new")} disabled={busy}>
             + Nova categoria
           </button>
         }
@@ -116,8 +133,8 @@ export function Categories({
                       </td>
                       <td>{c.description || "—"}</td>
                       <td className="actions">
-                        <button onClick={() => edit(c)}>Editar</button>
-                        <button onClick={() => remove(c)}>Excluir</button>
+                        <button onClick={() => edit(c)} disabled={busy}>Editar</button>
+                        <button onClick={() => remove(c)} disabled={busy}>Excluir</button>
                       </td>
                     </tr>
                   ))}
@@ -131,7 +148,12 @@ export function Categories({
           ))}
       </section>
       {editing && (
-        <Modal titleId="category-title" onClose={() => setEditing(null)}>
+        <Modal
+          titleId="category-title"
+          onClose={() => {
+            if (!busy && !operation.current) setEditing(null);
+          }}
+        >
           <h2 id="category-title">
             {editing === "new" ? "Nova categoria" : "Editar categoria"}
           </h2>
@@ -145,6 +167,7 @@ export function Categories({
                 maxLength={120}
                 required
                 autoFocus
+                disabled={busy}
               />
             </label>
             <label>
@@ -154,6 +177,7 @@ export function Categories({
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={500}
                 rows={3}
+                disabled={busy}
               />
             </label>
             {message && (
@@ -166,6 +190,7 @@ export function Categories({
                 type="button"
                 className="button secondary"
                 onClick={() => setEditing(null)}
+                disabled={busy}
               >
                 Cancelar
               </button>

@@ -26,4 +26,8 @@ export class UsersService {
   findPublicById(id: string) {
     return this.prisma.user.findUnique({ where: { id }, select: publicUser });
   }
+
+  async exists(id: string): Promise<boolean> {
+    return (await this.prisma.user.findUnique({ where: { id }, select: { id: true } })) !== null;
+  }
 }

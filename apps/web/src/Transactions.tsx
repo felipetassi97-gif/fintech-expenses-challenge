@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ApiError, queryString, request } from "./api";
+import { clearTransactionDateFilters } from "./transactions-query.js";
 import type {
   Category,
   Transaction,
@@ -16,6 +17,7 @@ import {
   useLoad,
 } from "./shared";
 import { TransactionEditor } from "./TransactionEditor";
+import type { WriteOperation } from "./write-operation";
 export function Transactions({
   token,
   logout,
@@ -23,7 +25,7 @@ export function Transactions({
   categoriesLoading,
   categoriesError,
   revision,
-  onTransactionChanged,
+  write,
 }: {
   token: string;
   logout: () => void;
@@ -31,17 +33,40 @@ export function Transactions({
   categoriesLoading: boolean;
   categoriesError: string;
   revision: number;
-  onTransactionChanged: () => void;
+  write: WriteOperation;
 }) {
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const type = searchParams.get("type") || "";
   const category = searchParams.get("categoryId") || "";
   const start = searchParams.get("startDate") || "";
   const end = searchParams.get("endDate") || "";
-  const pageParam = Number(searchParams.get("page"));
-  const page = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const rawPage = searchParams.get("page");
+  const pageParam = Number(rawPage);
+  const validPage = rawPage === null || (/^[1-9]\d*$/.test(rawPage) && Number.isSafeInteger(pageParam));
+  const page = validPage && rawPage !== null ? pageParam : 1;
+  const latestParams = useRef(new URLSearchParams(searchParams));
+  useLayoutEffect(() => {
+    latestParams.current = new URLSearchParams(searchParams);
+  }, [searchParams]);
+  useEffect(() => {
+    if (validPage) return;
+    const next = new URLSearchParams(latestParams.current);
+    next.delete("page");
+    latestParams.current = next;
+    setSearchParams(next, { replace: true });
+  }, [validPage, rawPage, setSearchParams]);
+  function changeQuery(change: (previous: URLSearchParams) => URLSearchParams) {
+    const next = change(latestParams.current);
+    latestParams.current = next;
+    setSearchParams(next);
+  }
   function updateQuery(key: string, value: string | number) {
-    setSearchParams((previous) => {
+    changeQuery((previous) => {
       const next = new URLSearchParams(previous);
       if (value === "" || (key === "page" && value === 1)) next.delete(key);
       else next.set(key, String(value));
@@ -51,26 +76,76 @@ export function Transactions({
   }
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
+  const listPath = `/transactions${queryString({ type, categoryId: category, startDate: start, endDate: end, page, limit: 10 })}`;
   const list = useLoad<TransactionPage>(
-    `/transactions${queryString({ type, categoryId: category, startDate: start, endDate: end, page, limit: 10 })}`,
+    listPath,
     token,
     logout,
     revision,
   );
+  const pagination = list.data?.pagination;
+  const lastPage = Math.max(1, pagination?.totalPages ?? 0);
+  useEffect(() => {
+    if (list.loading || list.loadedQuery?.path !== listPath || list.loadedQuery.revision !== revision || !pagination || pagination.page !== page || page <= lastPage) return;
+    const next = new URLSearchParams(latestParams.current);
+    if (lastPage === 1) next.delete("page");
+    else next.set("page", String(lastPage));
+    latestParams.current = next;
+    setSearchParams(next, { replace: true });
+  }, [list.loading, list.loadedQuery, listPath, revision, pagination, page, lastPage, setSearchParams]);
+  const paginationControls = pagination && pagination.total > 0 ? (
+    <div className="pagination">
+      <span>
+        {pagination.total} registro(s) · Página {page} de {pagination.totalPages}
+      </span>
+      <div>
+        <button
+          className="button secondary"
+          disabled={page <= 1}
+          onClick={() => updateQuery("page", page - 1)}
+        >
+          Anterior
+        </button>{" "}
+        {page > lastPage && (
+          <button
+            className="button secondary"
+            onClick={() => updateQuery("page", lastPage)}
+          >
+            Última página
+          </button>
+        )}{" "}
+        <button
+          className="button secondary"
+          disabled={page >= lastPage}
+          onClick={() => updateQuery("page", page + 1)}
+        >
+          Próxima
+        </button>
+      </div>
+    </div>
+  ) : null;
   function edit(item: Transaction) {
+    if (write.busy) return;
     setEditing(item);
     setMessage("");
   }
   async function remove(item: Transaction) {
+    if (write.busy) return;
     if (!window.confirm(`Excluir a transação “${item.description}”?`)) return;
+    if (!write.start()) return;
+    let changed: "transactions" | null = null;
     try {
       await request(`/transactions/${item.id}`, { method: "DELETE", token });
-      updateQuery("page", 1);
-      onTransactionChanged();
-      setMessage("Transação excluída.");
+      changed = "transactions";
+      if (mounted.current) {
+        updateQuery("page", 1);
+        setMessage("Transação excluída.");
+      }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) logout();
-      else setMessage(errorText(err));
+      if (err instanceof ApiError && err.status === 401 && write.isActive()) logout();
+      else if (mounted.current) setMessage(errorText(err));
+    } finally {
+      write.finish(changed);
     }
   }
   return (
@@ -131,6 +206,9 @@ export function Transactions({
             setEnd={(s) => {
               updateQuery("endDate", s);
             }}
+            onClear={() => {
+              changeQuery(clearTransactionDateFilters);
+            }}
           />
         </div>
         <State loading={list.loading || categoriesLoading} error={list.error || categoriesError} />
@@ -177,41 +255,25 @@ export function Transactions({
                           {t.type === "INCOME" ? "+" : "−"} {money(t.amount)}
                         </td>
                         <td className="actions">
-                          <button onClick={() => edit(t)}>Editar</button>
-                          <button onClick={() => remove(t)}>Excluir</button>
+                          <button onClick={() => edit(t)} disabled={write.busy}>Editar</button>
+                          <button onClick={() => remove(t)} disabled={write.busy}>Excluir</button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="pagination">
-                <span>
-                  {list.data.pagination.total} registro(s) · Página {page} de{" "}
-                  {list.data.pagination.totalPages}
-                </span>
-                <div>
-                  <button
-                    className="button secondary"
-                    disabled={page <= 1}
-                    onClick={() => updateQuery("page", page - 1)}
-                  >
-                    Anterior
-                  </button>{" "}
-                  <button
-                    className="button secondary"
-                    disabled={page >= list.data!.pagination.totalPages}
-                    onClick={() => updateQuery("page", page + 1)}
-                  >
-                    Próxima
-                  </button>
-                </div>
-              </div>
+              {paginationControls}
             </>
           ) : (
-            <p className="empty">
-              Nenhuma transação encontrada para os filtros selecionados.
-            </p>
+            <>
+              <p className="empty">
+                {pagination?.total
+                  ? "Esta página não contém transações. Volte para uma página válida."
+                  : "Nenhuma transação encontrada para os filtros selecionados."}
+              </p>
+              {paginationControls}
+            </>
           ))}
       </section>
       {editing && (
@@ -224,9 +286,9 @@ export function Transactions({
           categoriesError={categoriesError}
           onClose={() => setEditing(null)}
           onSaved={() => {
-            onTransactionChanged();
             setMessage("Transação salva com sucesso.");
           }}
+          write={write}
         />
       )}
     </>

@@ -2,18 +2,15 @@ import { useEffect, useState } from "react";
 import { queryString } from "./api";
 import type { Dashboard } from "./api";
 import { money } from "./shared";
+import { decimalFromCents } from "./money.js";
+import { toCents, visualShare } from "./chart-money.js";
 import type { Page } from "./shared";
-
-function cents(value: string): number {
-  const [whole, fraction = ""] = value.split(".");
-  return Number(whole) * 100 + Number((fraction + "00").slice(0, 2));
-}
 
 type ExpenseSegment = {
   id: string;
   categoryId?: string;
   name: string;
-  amount: number;
+  amount: bigint;
   color: string;
 };
 
@@ -27,25 +24,25 @@ export function ExpenseChart({ data, start, end, navigate }: {
   useEffect(() => setActiveCategory(null), [start, end]);
   const colors = ["#1254c8", "#21a7e8", "#16b879"];
   const top = data.topCategories;
-  const topTotal = top.reduce((sum, c) => sum + cents(c.amount), 0);
-  const total = cents(data.expense);
-  const remainder = Math.max(0, total - topTotal);
+  const topTotal = top.reduce((sum, c) => sum + toCents(c.amount), 0n);
+  const total = toCents(data.expense);
+  const remainder = total > topTotal ? total - topTotal : 0n;
   const segments: ExpenseSegment[] = [
     ...top.map((category, index) => ({
       id: category.categoryId,
       categoryId: category.categoryId,
       name: category.name,
-      amount: cents(category.amount),
+      amount: toCents(category.amount),
       color: colors[index],
     })),
-    ...(remainder > 0
+    ...(remainder > 0n
       ? [{ id: "other", name: "Outras categorias", amount: remainder, color: "#d8e3f2" }]
       : []),
   ];
   let chartOffset = 0;
   const circumference = 2 * Math.PI * 83;
   const chartSegments = segments.map((segment) => {
-    const share = total ? segment.amount / total : 0;
+    const share = visualShare(segment.amount, total);
     const midAngle = -90 + (chartOffset + share / 2) * 360;
     const offset = chartOffset;
     chartOffset += share;
@@ -96,7 +93,7 @@ export function ExpenseChart({ data, start, end, navigate }: {
                               transform="rotate(-90 120 120)"
                               role={segment.categoryId ? "button" : "img"}
                               tabIndex={segment.categoryId ? 0 : -1}
-                              aria-label={`${segment.name}: ${money((segment.amount / 100).toFixed(2))}, ${shareLabel}% das despesas${segment.categoryId ? ". Ative para abrir os lançamentos desta categoria" : ""}`}
+                              aria-label={`${segment.name}: ${money(decimalFromCents(segment.amount))}, ${shareLabel}% das despesas${segment.categoryId ? ". Ative para abrir os lançamentos desta categoria" : ""}`}
                               onPointerEnter={(event) => {
                                 if (event.pointerType === "mouse") setActiveCategory(segment.id);
                               }}
@@ -120,8 +117,8 @@ export function ExpenseChart({ data, start, end, navigate }: {
                       })}
                     </svg>
                     <div className="donut-center">
-                      <strong>{activeSegment ? activeSegment.name : money((total / 100).toFixed(2))}</strong>
-                      <small>{activeSegment ? `${money((activeSegment.amount / 100).toFixed(2))} · ${(activeSegment.share * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% das despesas` : "Total no período"}</small>
+                      <strong>{activeSegment ? activeSegment.name : money(decimalFromCents(total))}</strong>
+                      <small>{activeSegment ? `${money(decimalFromCents(activeSegment.amount))} · ${(activeSegment.share * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% das despesas` : "Total no período"}</small>
                     </div>
                   </div>
                   <ul className="legend">
@@ -131,7 +128,7 @@ export function ExpenseChart({ data, start, end, navigate }: {
                         <>
                           <span className="dot" style={{ background: segment.color }} />
                           <span className="legend-name">{segment.name}</span>
-                          <strong>{total > 0 ? `${(segment.amount / total * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "0%"}<small>{money((segment.amount / 100).toFixed(2))}</small></strong>
+                          <strong>{total > 0n ? `${(segment.share * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "0%"}<small>{money(decimalFromCents(segment.amount))}</small></strong>
                           {segment.categoryId && <svg className="legend-open-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h11m-4-4 4 4-4 4" /></svg>}
                         </>
                       );
@@ -142,7 +139,7 @@ export function ExpenseChart({ data, start, end, navigate }: {
                               type="button"
                               className={`legend-entry${selected ? " active" : ""}`}
                               data-category-id={segment.categoryId}
-                              aria-label={`${segment.name}: ${money((segment.amount / 100).toFixed(2))}, ${(segment.share * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% das despesas. Abrir lançamentos da categoria`}
+                              aria-label={`${segment.name}: ${money(decimalFromCents(segment.amount))}, ${(segment.share * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% das despesas. Abrir lançamentos da categoria`}
                               title={`Ver lançamentos de ${segment.name}`}
                               onPointerEnter={(event) => {
                                 if (event.pointerType === "mouse") setActiveCategory(segment.id);

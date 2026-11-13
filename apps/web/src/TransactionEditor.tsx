@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, request } from "./api";
 import type { Category, Transaction, TransactionInput } from "./api";
+import type { WriteOperation } from "./write-operation";
 import { errorText, Modal } from "./shared";
 
 type TransactionEditorItem = Transaction | "new";
@@ -52,6 +53,7 @@ export function TransactionEditor({
   categoriesError,
   onClose,
   onSaved,
+  write,
 }: {
   item: TransactionEditorItem;
   token: string;
@@ -61,12 +63,21 @@ export function TransactionEditor({
   categoriesError: string;
   onClose: () => void;
   onSaved: () => void;
+  write: WriteOperation;
 }) {
   const [form, setForm] = useState<TransactionInput>(() =>
     initialForm(item, categories),
   );
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const busy = write.busy;
+  const operation = useRef(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (item === "new" && categories?.length) {
@@ -80,9 +91,12 @@ export function TransactionEditor({
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
+    if (operation.current || !write.start()) return;
+    operation.current = true;
+    setSaving(true);
     setMessage("");
     const isNew = item === "new";
+    let changed: "transactions" | null = null;
 
     try {
       await request(isNew ? "/transactions" : `/transactions/${item.id}`, {
@@ -90,18 +104,28 @@ export function TransactionEditor({
         token,
         body: { ...form, amount: form.amount.replace(",", ".") },
       });
-      onSaved();
-      onClose();
+      changed = "transactions";
+      if (mounted.current) {
+        onSaved();
+        onClose();
+      }
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) logout();
-      else setMessage(errorText(error));
+      if (error instanceof ApiError && error.status === 401 && write.isActive()) logout();
+      else if (mounted.current) setMessage(errorText(error));
     } finally {
-      setBusy(false);
+      operation.current = false;
+      if (mounted.current) setSaving(false);
+      write.finish(changed);
     }
   }
 
   return (
-    <Modal titleId="transaction-title" onClose={onClose}>
+    <Modal
+      titleId="transaction-title"
+      onClose={() => {
+        if (!busy && !operation.current) onClose();
+      }}
+    >
       <h2 id="transaction-title">
         {item === "new" ? "Nova transação" : "Editar transação"}
       </h2>
@@ -117,6 +141,7 @@ export function TransactionEditor({
             required
             maxLength={500}
             autoFocus
+            disabled={busy}
           />
         </label>
         <div className="form-grid">
@@ -124,6 +149,7 @@ export function TransactionEditor({
             Tipo
             <select
               value={form.type}
+              disabled={busy}
               onChange={(event) =>
                 setForm({
                   ...form,
@@ -146,6 +172,7 @@ export function TransactionEditor({
               placeholder="0,00"
               required
               pattern="[0-9]+([.,][0-9]{1,2})?"
+              disabled={busy}
             />
           </label>
           <label>
@@ -153,6 +180,7 @@ export function TransactionEditor({
             <select
               required
               value={form.categoryId}
+              disabled={busy}
               onChange={(event) =>
                 setForm({ ...form, categoryId: event.target.value })
               }
@@ -171,6 +199,7 @@ export function TransactionEditor({
               type="date"
               required
               value={form.date}
+              disabled={busy}
               onChange={(event) =>
                 setForm({ ...form, date: event.target.value })
               }
@@ -202,6 +231,7 @@ export function TransactionEditor({
             type="button"
             className="button secondary"
             onClick={onClose}
+            disabled={busy}
           >
             Cancelar
           </button>
@@ -211,7 +241,7 @@ export function TransactionEditor({
               busy || categoriesLoading || !!categoriesError || !categories?.length
             }
           >
-            {busy ? "Salvando..." : "Salvar transação"}
+            {saving ? "Salvando..." : "Salvar transação"}
           </button>
         </div>
       </form>

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, request } from "./api";
+export { money } from "./money.js";
 export type Page = "dashboard" | "transactions" | "categories";
-export const money = (value: string) =>
-  Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export const day = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
 export const errorText = (error: unknown) =>
@@ -36,6 +35,7 @@ export function useLoad<T>(
   revision = 0,
 ) {
   const [data, setData] = useState<T | null>(null);
+  const [loadedQuery, setLoadedQuery] = useState<{ path: string; revision: number } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -43,10 +43,15 @@ export function useLoad<T>(
     setLoading(true);
     setError("");
     request<T>(path, { token, signal: controller.signal })
-      .then(setData)
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        setData(value);
+        setLoadedQuery({ path, revision });
+      })
       .catch((err) => {
         if (controller.signal.aborted) return;
         setData(null);
+        setLoadedQuery(null);
         if (err instanceof ApiError && err.status === 401) logout();
         else setError(errorText(err));
       })
@@ -55,7 +60,7 @@ export function useLoad<T>(
       });
     return () => controller.abort();
   }, [path, token, logout, revision]);
-  return { data, error, loading };
+  return { data, error, loading, loadedQuery };
 }
 export function Heading({
   eyebrow,
@@ -95,11 +100,13 @@ export function DateFilters({
   end,
   setStart,
   setEnd,
+  onClear,
 }: {
   start: string;
   end: string;
   setStart: (s: string) => void;
   setEnd: (s: string) => void;
+  onClear: () => void;
 }) {
   return (
     <div className="date-filters">
@@ -124,10 +131,7 @@ export function DateFilters({
       {(start || end) && (
         <button
           className="link"
-          onClick={() => {
-            setStart("");
-            setEnd("");
-          }}
+          onClick={onClear}
         >
           Limpar
         </button>

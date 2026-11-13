@@ -83,6 +83,32 @@ test('me rejects a valid token whose user no longer exists', async () => {
   await request(app.getHttpServer()).get('/api/auth/me').set('Authorization', `Bearer ${missing}`).expect(401);
 });
 
+test('all protected resources reject a signed token after its user is deleted', async () => {
+  const removedEmail = `removed-${randomUUID()}@example.test`;
+  const user = await prisma.user.create({ data: { name: 'Removed', email: removedEmail, passwordHash: 'unused' } });
+  const removedToken = new JwtService({ secret: process.env.JWT_SECRET }).sign({ sub: user.id });
+  await prisma.user.delete({ where: { id: user.id } });
+  const authorization = `Bearer ${removedToken}`;
+  const responses = await Promise.all([
+    request(app.getHttpServer()).get('/api/categories').set('Authorization', authorization),
+    request(app.getHttpServer()).post('/api/categories').set('Authorization', authorization).send({ name: 'Test' }),
+    request(app.getHttpServer()).get('/api/transactions').set('Authorization', authorization),
+    request(app.getHttpServer()).get('/api/dashboard').set('Authorization', authorization),
+    request(app.getHttpServer()).get('/api/auth/me').set('Authorization', authorization),
+  ]);
+  for (const response of responses) {
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ statusCode: 401, message: 'Invalid token' });
+  }
+});
+
+test('protected resources reject a signed token with an invalid subject', async () => {
+  const invalidSubject = new JwtService({ secret: process.env.JWT_SECRET }).sign({ sub: 'not-a-uuid' });
+  const response = await request(app.getHttpServer()).get('/api/categories')
+    .set('Authorization', `Bearer ${invalidSubject}`).expect(401);
+  expect(response.body).toEqual({ statusCode: 401, message: 'Invalid token' });
+});
+
 test('application fails to start without a JWT secret', () => {
   const result = spawnSync(process.execPath, ['dist/main.js'], {
     cwd: process.cwd(), env: { ...process.env, JWT_SECRET: ' ' }, encoding: 'utf8', timeout: 10000,

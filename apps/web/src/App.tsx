@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   HashRouter,
   Navigate,
@@ -16,6 +16,7 @@ import { TransactionEditor } from "./TransactionEditor";
 import { Transactions } from "./Transactions";
 import { Brand, useLoad } from "./shared";
 import type { Page } from "./shared";
+import type { WriteOperation } from "./write-operation";
 import "./shell.css";
 
 function NavIcon({ page }: { page: Page }) {
@@ -99,6 +100,30 @@ function AuthenticatedWorkspace({
     categoryRevision,
   );
   const [transactionRevision, setTransactionRevision] = useState(0);
+  const operationPending = useRef(false);
+  const workspaceActive = useRef(true);
+  const [operationBusy, setOperationBusy] = useState(false);
+  useEffect(() => {
+    workspaceActive.current = true;
+    return () => { workspaceActive.current = false; };
+  }, []);
+  const write: WriteOperation = {
+    busy: operationBusy,
+    start: () => {
+      if (operationPending.current || !workspaceActive.current) return false;
+      operationPending.current = true;
+      setOperationBusy(true);
+      return true;
+    },
+    finish: (changed) => {
+      operationPending.current = false;
+      if (!workspaceActive.current) return;
+      if (changed === "categories") setCategoryRevision((value) => value + 1);
+      if (changed === "transactions") setTransactionRevision((value) => value + 1);
+      setOperationBusy(false);
+    },
+    isActive: () => workspaceActive.current,
+  };
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [saveNotice, setSaveNotice] = useState("");
 
@@ -108,17 +133,8 @@ function AuthenticatedWorkspace({
     return () => window.clearTimeout(timeout);
   }, [saveNotice]);
 
-  function transactionsChanged() {
-    setTransactionRevision((revision) => revision + 1);
-  }
-
   function transactionSaved() {
-    transactionsChanged();
     setSaveNotice("Transação salva com sucesso.");
-  }
-
-  function categoriesChanged() {
-    setCategoryRevision((revision) => revision + 1);
   }
 
   const initials = user.name
@@ -217,7 +233,7 @@ function AuthenticatedWorkspace({
                   categoriesLoading={categories.loading}
                   categoriesError={categories.error}
                   revision={transactionRevision}
-                  onTransactionChanged={transactionsChanged}
+                  write={write}
                 />
               }
             />
@@ -230,7 +246,7 @@ function AuthenticatedWorkspace({
                   data={categories.data}
                   loading={categories.loading}
                   error={categories.error}
-                  onCategoriesChanged={categoriesChanged}
+                  write={write}
                 />
               }
             />
@@ -247,6 +263,7 @@ function AuthenticatedWorkspace({
             categoriesError={categories.error}
             onClose={() => setQuickAddOpen(false)}
             onSaved={transactionSaved}
+            write={write}
           />
         )}
         <button
@@ -256,6 +273,7 @@ function AuthenticatedWorkspace({
           aria-haspopup="dialog"
           title="Adicionar transação"
           onClick={() => setQuickAddOpen(true)}
+          disabled={operationBusy}
         >
           <svg
             aria-hidden="true"

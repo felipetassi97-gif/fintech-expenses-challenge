@@ -29,9 +29,11 @@ function changeTone(change: MetricChange, kind: ComparisonKind) {
 
 function signedCurrency(value: string | null): string | null {
   if (value === null) return null;
-  const numeric = Number(value);
-  const sign = numeric > 0 ? "+" : numeric < 0 ? "−" : "";
-  return `${sign}${money(Math.abs(numeric).toFixed(2))}`;
+  const negative = value.startsWith("-");
+  const absolute = negative ? value.slice(1) : value;
+  const nonzero = /[1-9]/.test(absolute);
+  const sign = nonzero ? (negative ? "−" : "+") : "";
+  return `${sign}${money(absolute)}`;
 }
 
 function TrendIcon({ direction }: { direction: MetricChange["direction"] }) {
@@ -214,8 +216,8 @@ export function PeriodIndicators({
   const operationalValue = data.periodIndicators.operationalParticipation === null
     ? "—"
     : `${Number(data.periodIndicators.operationalParticipation).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
-  const resultValue = Number(data.periodIndicators.periodResult);
-  const resultTone = resultValue > 0 ? "positive" : resultValue < 0 ? "negative" : "neutral";
+  const resultValue = data.periodIndicators.periodResult;
+  const resultTone = !/[1-9]/.test(resultValue) ? "neutral" : resultValue.startsWith("-") ? "negative" : "positive";
 
   return (
     <section className="period-indicators" aria-labelledby="period-indicators-title">
