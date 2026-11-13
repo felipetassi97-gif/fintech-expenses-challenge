@@ -78,21 +78,25 @@ test('validates DTOs and rejects userId injection', async () => {
   await api().patch(`/api/categories/${category.id}`).set('Authorization', tokens[0]).send({ userId: ids[1] }).expect(400);
 });
 
-test('returns conflict for a category with transactions', async () => {
+test('deleting a category also deletes its transactions', async () => {
   const category = await prisma.category.create({ data: { userId: ids[0], name: 'Linked' } });
-  await prisma.transaction.create({ data: { userId: ids[0], categoryId: category.id, description: 'Test', amount: '1.00', type: 'EXPENSE', date: new Date('2026-01-01') } });
-  await api().delete(`/api/categories/${category.id}`).set('Authorization', tokens[0]).expect(409);
+  const transaction = await prisma.transaction.create({ data: { userId: ids[0], categoryId: category.id, description: 'Test', amount: '1.00', type: 'EXPENSE', date: new Date('2026-01-01') } });
   await api().delete(`/api/categories/${category.id}`).set('Authorization', tokens[1]).expect(404);
+  await api().delete(`/api/categories/${category.id}`).set('Authorization', tokens[0]).expect(204);
+  expect(await prisma.category.findUnique({ where: { id: category.id } })).toBeNull();
+  expect(await prisma.transaction.findUnique({ where: { id: transaction.id } })).toBeNull();
 });
 
-test('returns conflict when a concurrent transaction commits before deletion', async () => {
+test('deleting a category cascades to a transaction that commits concurrently', async () => {
   const category = await prisma.category.create({ data: { userId: ids[0], name: 'Concurrent' } });
+  let transactionId;
   let inserted;
   const ready = new Promise((resolve) => { inserted = resolve; });
   let release;
   const proceed = new Promise((resolve) => { release = resolve; });
   const transaction = prisma.$transaction(async (tx) => {
-    await tx.transaction.create({ data: { userId: ids[0], categoryId: category.id, description: 'Concurrent', amount: '1.00', type: 'EXPENSE', date: new Date('2026-01-01') } });
+    const created = await tx.transaction.create({ data: { userId: ids[0], categoryId: category.id, description: 'Concurrent', amount: '1.00', type: 'EXPENSE', date: new Date('2026-01-01') } });
+    transactionId = created.id;
     const [{ pid }] = await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
     inserted(pid);
     await proceed;
@@ -112,5 +116,6 @@ test('returns conflict when a concurrent transaction commits before deletion', a
     release();
   }
   await transaction;
-  expect((await deletion).status).toBe(409);
+  expect((await deletion).status).toBe(204);
+  expect(await prisma.transaction.findUnique({ where: { id: transactionId } })).toBeNull();
 });

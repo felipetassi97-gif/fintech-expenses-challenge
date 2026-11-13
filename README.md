@@ -67,7 +67,7 @@ Mantenha os testes em um banco isolado e os dados públicos fictícios. A suíte
 
 ## Decisões técnicas
 
-O PostgreSQL armazena valores monetários como `Decimal(14,2)` e datas sem horário. A relação entre transações e categorias inclui o identificador do usuário, garantindo no banco que ambos tenham o mesmo proprietário. Restrições também impedem valores não positivos e a exclusão de categorias com transações.
+O PostgreSQL armazena valores monetários como `Decimal(14,2)` e datas sem horário. A relação entre transações e categorias inclui o identificador do usuário, garantindo no banco que ambos tenham o mesmo proprietário. Restrições também impedem valores não positivos; excluir uma categoria exclui em cascata suas transações.
 
 A autenticação usa bcrypt para armazenar senhas como hashes e JWT com validade de uma hora. A API está organizada por responsabilidade em módulos NestJS. O monorepo mantém API e interface próximas, com dependências e execução independentes.
 
@@ -85,7 +85,7 @@ O e-mail é normalizado para minúsculas e sem espaços nas extremidades. No cad
 
 As rotas abaixo exigem `Authorization: Bearer <token>`. Cada usuário acessa apenas seus próprios dados.
 
-- `GET` e `POST /api/categories`; `GET`, `PATCH` e `DELETE /api/categories/:id`. A exclusão de categoria vinculada a transações retorna 409.
+- `GET` e `POST /api/categories`; `GET`, `PATCH` e `DELETE /api/categories/:id`. A exclusão de categoria também exclui suas transações vinculadas.
 - `GET` e `POST /api/transactions`; `GET`, `PATCH` e `DELETE /api/transactions/:id`. A listagem aceita `type`, `categoryId`, `startDate`, `endDate`, `page` e `limit` e retorna `data` e `pagination`.
 - `GET /api/dashboard` aceita `startDate`, `endDate`, `comparisonStartDate` e `comparisonEndDate`. Retorna o saldo atual até a data de hoje no fuso `America/Sao_Paulo` (`balance`), o saldo de todas as transações, inclusive futuras (`historicalBalance`), o saldo até o fim do intervalo (`balanceAtEnd`), entradas, despesas, as três categorias de maior volume e os indicadores calculados no backend. Os dois limites de comparação devem ser informados juntos e precisam anteceder o período selecionado.
 

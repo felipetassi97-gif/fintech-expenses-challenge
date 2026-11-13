@@ -39,7 +39,7 @@ test('registration through financial operations and dashboard', async () => {
   expect(dashboard.body).toMatchObject({ balance: '-10.25', income: '0.00', expense: '10.25', topCategories: [
     { categoryId: category.body.id, name: 'Expenses', amount: '10.25' },
   ] });
-  await request(server).delete(`/api/categories/${category.body.id}`).set('Authorization', authorization).expect(409);
-  await request(server).delete(`/api/transactions/${transaction.body.id}`).set('Authorization', authorization).expect(204);
   await request(server).delete(`/api/categories/${category.body.id}`).set('Authorization', authorization).expect(204);
+  const transactionsAfterCategoryDelete = await request(server).get('/api/transactions').set('Authorization', authorization).expect(200);
+  expect(transactionsAfterCategoryDelete.body.data.some(item => item.id === transaction.body.id)).toBe(false);
 });

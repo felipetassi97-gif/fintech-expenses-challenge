@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { ApiError, request } from "./api";
 import type { Category } from "./api";
 import type { WriteOperation } from "./write-operation";
-import { Heading, Modal, State, errorText } from "./shared";
+import { ConfirmDialog, Heading, Modal, State, errorText } from "./shared";
 export function Categories({
   token,
   logout,
@@ -23,6 +23,8 @@ export function Categories({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState("");
   const busy = write.busy;
   const operation = useRef(false);
   const mounted = useRef(true);
@@ -65,19 +67,27 @@ export function Categories({
       write.finish(changed);
     }
   }
-  async function remove(c: Category) {
+  function requestDelete(c: Category) {
     if (operation.current || busy) return;
-    if (!window.confirm(`Excluir a categoria “${c.name}”?`)) return;
+    setDeleteMessage("");
+    setDeleteTarget(c);
+  }
+  async function remove() {
+    const category = deleteTarget;
+    if (!category || operation.current) return;
     if (!write.start()) return;
     operation.current = true;
     let changed: "categories" | null = null;
     try {
-      await request(`/categories/${c.id}`, { method: "DELETE", token });
+      await request(`/categories/${category.id}`, { method: "DELETE", token });
       changed = "categories";
-      if (mounted.current) setMessage("Categoria excluída.");
+      if (mounted.current) {
+        setDeleteTarget(null);
+        setMessage("Categoria e transações vinculadas excluídas.");
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401 && write.isActive()) logout();
-      else if (mounted.current) setMessage(errorText(err));
+      else if (mounted.current) setDeleteMessage(errorText(err));
     } finally {
       operation.current = false;
       write.finish(changed);
@@ -134,7 +144,7 @@ export function Categories({
                       <td>{c.description || "—"}</td>
                       <td className="actions">
                         <button onClick={() => edit(c)} disabled={busy}>Editar</button>
-                        <button onClick={() => remove(c)} disabled={busy}>Excluir</button>
+                        <button onClick={() => requestDelete(c)} disabled={busy}>Excluir</button>
                       </td>
                     </tr>
                   ))}
@@ -200,6 +210,24 @@ export function Categories({
             </div>
           </form>
         </Modal>
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          titleId="category-delete-title"
+          title={`Excluir categoria “${deleteTarget.name}”?`}
+          description={`Todas as transações vinculadas a “${deleteTarget.name}” também serão excluídas. Essa ação não pode ser desfeita.`}
+          confirmLabel="Excluir categoria"
+          busyLabel="Excluindo..."
+          busy={busy}
+          error={deleteMessage}
+          onConfirm={() => void remove()}
+          onClose={() => {
+            if (!busy && !operation.current) {
+              setDeleteTarget(null);
+              setDeleteMessage("");
+            }
+          }}
+        />
       )}
     </>
   );

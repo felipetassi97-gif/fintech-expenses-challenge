@@ -192,3 +192,55 @@ export function Modal({
     </dialog>
   );
 }
+
+export function ConfirmDialog({
+  titleId,
+  title,
+  description,
+  confirmLabel = "Confirmar",
+  busyLabel = "Aguarde...",
+  busy = false,
+  error = "",
+  onConfirm,
+  onClose,
+}: {
+  titleId: string;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  busyLabel?: string;
+  busy?: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal titleId={titleId} onClose={onClose}>
+      <h2 id={titleId}>{title}</h2>
+      <p>{description}</p>
+      {error && (
+        <p className="alert error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="dialog-actions">
+        <button
+          type="button"
+          className="button secondary"
+          onClick={onClose}
+          disabled={busy}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="button danger"
+          onClick={onConfirm}
+          disabled={busy}
+        >
+          {busy ? busyLabel : confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
+}

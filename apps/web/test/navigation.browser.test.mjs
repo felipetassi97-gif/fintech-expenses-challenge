@@ -69,8 +69,10 @@ test('transaction filters, history and pagination remain consistent', { skip: !b
   await page.goto(`${url}/#/transactions?page=999`);
   await page.waitForURL(/page=2$/);
   await page.getByText('Item de teste').waitFor();
-  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Excluir' }).click();
+  const deletionDialog = page.getByRole('dialog');
+  await deletionDialog.getByText('Esta ação não pode ser desfeita.', { exact: true }).waitFor();
+  await deletionDialog.getByRole('button', { name: 'Excluir transação' }).click();
   await page.waitForURL(/#\/transactions$/);
   await page.getByText('Transação excluída.').waitFor();
   total = 0;

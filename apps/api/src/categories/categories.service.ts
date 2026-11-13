@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.module';
@@ -40,9 +40,6 @@ export class CategoriesService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException('Category not found');
-      }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw new ConflictException('Category has transactions');
       }
       throw error;
     }

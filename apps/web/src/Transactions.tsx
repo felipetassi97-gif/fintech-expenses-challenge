@@ -8,6 +8,7 @@ import type {
   TransactionPage,
 } from "./api";
 import {
+  ConfirmDialog,
   DateFilters,
   Heading,
   State,
@@ -77,6 +78,8 @@ export function Transactions({
   }
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState("");
   const invalidDateRange = hasInvertedDateRange(start, end);
   const listPath = `/transactions${queryString({ type, categoryId: category, startDate: start, endDate: end, page, limit: 10 })}`;
   const list = useLoad<TransactionPage>(
@@ -132,21 +135,27 @@ export function Transactions({
     setEditing(item);
     setMessage("");
   }
-  async function remove(item: Transaction) {
+  function requestDelete(item: Transaction) {
     if (write.busy) return;
-    if (!window.confirm(`Excluir a transação “${item.description}”?`)) return;
+    setDeleteMessage("");
+    setDeleteTarget(item);
+  }
+  async function remove() {
+    const item = deleteTarget;
+    if (!item) return;
     if (!write.start()) return;
     let changed: "transactions" | null = null;
     try {
       await request(`/transactions/${item.id}`, { method: "DELETE", token });
       changed = "transactions";
       if (mounted.current) {
+        setDeleteTarget(null);
         updateQuery("page", 1);
         setMessage("Transação excluída.");
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401 && write.isActive()) logout();
-      else if (mounted.current) setMessage(errorText(err));
+      else if (mounted.current) setDeleteMessage(errorText(err));
     } finally {
       write.finish(changed);
     }
@@ -259,7 +268,7 @@ export function Transactions({
                         </td>
                         <td className="actions">
                           <button onClick={() => edit(t)} disabled={write.busy}>Editar</button>
-                          <button onClick={() => remove(t)} disabled={write.busy}>Excluir</button>
+                          <button onClick={() => requestDelete(t)} disabled={write.busy}>Excluir</button>
                         </td>
                       </tr>
                     ))}
@@ -292,6 +301,24 @@ export function Transactions({
             setMessage("Transação salva com sucesso.");
           }}
           write={write}
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          titleId="transaction-delete-title"
+          title={`Excluir transação “${deleteTarget.description}”?`}
+          description="Esta ação não pode ser desfeita."
+          confirmLabel="Excluir transação"
+          busyLabel="Excluindo..."
+          busy={write.busy}
+          error={deleteMessage}
+          onConfirm={() => void remove()}
+          onClose={() => {
+            if (!write.busy) {
+              setDeleteTarget(null);
+              setDeleteMessage("");
+            }
+          }}
         />
       )}
     </>

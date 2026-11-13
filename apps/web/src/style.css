@@ -106,6 +106,13 @@ textarea {
 .secondary:hover {
   background: #f2f7fd;
 }
+.danger {
+  background: #c8282d;
+  color: #fff;
+}
+.danger:hover:not(:disabled) {
+  background: #a51c2a;
+}
 .link {
   background: none;
   border: 0;

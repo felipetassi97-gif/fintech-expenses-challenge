@@ -42,7 +42,7 @@ model Transaction {
   type        TransactionType
   date        DateTime        @db.Date
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    Category        @relation(fields: [categoryId, userId], references: [id, userId], onDelete: Restrict)
+  category    Category        @relation(fields: [categoryId, userId], references: [id, userId], onDelete: Cascade)
 
   @@index([userId, date])
   @@index([categoryId, userId])
