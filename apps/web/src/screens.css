@@ -88,6 +88,38 @@
 .auth-card .primary:active:not(:disabled),
 .content .page-heading .primary:active:not(:disabled),
 .dialog .primary:active:not(:disabled) { transform: translateY(0); }
+.session-recovery {
+  padding: 24px;
+  background: radial-gradient(circle at 75% 15%, #dcecfb 0, transparent 35%), #f3f7fc;
+}
+.session-recovery-card {
+  width: min(520px, 100%);
+  padding: 38px;
+  border: 1px solid #dbe6f2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px #12365b12, 0 3px 10px #12365b08;
+  text-align: left;
+}
+.session-recovery-card h1 {
+  margin: 12px 0;
+  color: #0c1d38;
+  font-size: clamp(24px, 4vw, 30px);
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+.session-recovery-card p {
+  margin: 0;
+  color: #52657c;
+  line-height: 1.6;
+}
+.session-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.session-recovery-actions .button { min-height: 44px; }
 .workspace-panel {
   border-color: #d8e4f1;
   border-radius: 16px;
@@ -186,4 +218,7 @@
   .auth-card .primary:hover:not(:disabled),
   .content .page-heading .primary:hover:not(:disabled),
   .dialog .primary:hover:not(:disabled) { transform: none; }
+  .session-recovery-card { padding: 28px 24px; }
+  .session-recovery-actions { flex-direction: column; }
+  .session-recovery-actions .button { width: 100%; }
 }

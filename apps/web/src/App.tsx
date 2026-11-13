@@ -65,6 +65,34 @@ function PublicAuth() {
   );
 }
 
+function SessionRecovery() {
+  const { logout, notice, retrySession } = useSession();
+  const navigate = useNavigate();
+
+  function goToLogin() {
+    logout();
+    navigate("/login", { replace: true });
+  }
+
+  return (
+    <main className="center session-recovery" aria-labelledby="session-recovery-title">
+      <section className="session-recovery-card">
+        <span className="eyebrow blue">SESSÃO</span>
+        <h1 id="session-recovery-title">Não foi possível confirmar sua sessão</h1>
+        <p role="alert">{notice}</p>
+        <div className="session-recovery-actions">
+          <button className="button primary" type="button" onClick={retrySession}>
+            Tentar novamente
+          </button>
+          <button className="button secondary" type="button" onClick={goToLogin}>
+            Ir para login
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function Workspace() {
   const { user, token, logout } = useSession();
   const navigate = useNavigate();
@@ -292,8 +320,9 @@ function AuthenticatedWorkspace({
 }
 
 function AppRoutes() {
-  const { checking } = useSession();
-  if (checking) return <div className="center">Carregando sua sessão...</div>;
+  const { checking, recoveryRequired } = useSession();
+  if (checking) return <div className="center" role="status">Carregando sua sessão...</div>;
+  if (recoveryRequired) return <SessionRecovery />;
   return (
     <Routes>
       <Route path="/login" element={<PublicAuth />} />

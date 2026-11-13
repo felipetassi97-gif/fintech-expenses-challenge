@@ -215,6 +215,12 @@ test('quick category creation keeps the transaction draft and selects the new ca
   quickCategory = dialog.getByRole('region', { name: 'Criar categoria' });
   const categoryName = quickCategory.getByLabel('Nome', { exact: true });
   const categoryDescription = quickCategory.locator('textarea');
+  assert.equal(await categoryName.inputValue(), '', 'reopening must reset the canceled category draft');
+  await categoryName.press('Enter');
+  await quickCategory.getByText('Informe o nome da categoria.').waitFor();
+  assert.equal(await categoryName.evaluate(element => element === document.activeElement), true);
+  assert.equal(categoryBodies.length, 0);
+  assert.equal(transactionPosts, 0);
   await categoryName.fill('  Planejamento  ');
   await categoryDescription.fill('  Revisão mensal  ');
   await quickCategory.getByRole('button', { name: 'Salvar categoria' }).click();
@@ -226,7 +232,7 @@ test('quick category creation keeps the transaction draft and selects the new ca
   assert.equal(await dialog.getByLabel('Descrição', { exact: true }).inputValue(), 'Almoço com o time');
   assert.equal(await dialog.getByLabel('Valor (R$)').inputValue(), '45,90');
 
-  await quickCategory.getByRole('button', { name: 'Salvar categoria' }).click();
+  await categoryName.press('Enter');
   await dialog.getByLabel('Categoria', { exact: true }).locator('option[value="new-category"]').waitFor({ state: 'attached' });
   assert.equal(await dialog.getByLabel('Categoria', { exact: true }).inputValue(), 'new-category');
   assert.deepEqual(categoryBodies[1], { name: 'Planejamento', description: 'Revisão mensal' });
