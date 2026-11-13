@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: fintech_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d fintech_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/fintech_test?schema=public
+      DIRECT_URL: postgresql://test:test@localhost:5432/fintech_test?schema=public
+      TEST_DATABASE_URL: postgresql://test:test@localhost:5432/fintech_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate -w @fintech/api
+      - run: npm run prisma:deploy -w @fintech/api
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test -w @fintech/api
+      - run: node --test apps/web/test/*.test.mjs

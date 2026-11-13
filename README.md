@@ -5,6 +5,11 @@ Aplicação para registrar e acompanhar receitas e despesas por categoria, com d
 - Aplicação pública: https://fintech-expenses-challenge.netlify.app
 - Repositório: https://github.com/felipetassi97-gif/fintech-expenses-challenge
 
+Conta de demonstração:
+
+- E-mail: `contateste@teste.com`
+- Senha: `Teste123@`
+
 ## Escopo
 
 O sistema contempla autenticação, gestão de categorias, transações financeiras e indicadores consolidados. A interface React consome a API para autenticação, operações de categorias e transações e consulta dos indicadores.
@@ -96,6 +101,7 @@ Execute `npm run build`, `npm run typecheck` e `npm run lint` na raiz. Os testes
 export TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/fintech_test?schema=public'
 DIRECT_URL="$TEST_DATABASE_URL" DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:deploy -w @fintech/api
 npm run test -w @fintech/api
+node --test apps/web/test/*.test.mjs
 ```
 
 Os testes criam e removem seus próprios dados; não use banco de produção. É possível criar uma conta pela interface para experimentar a aplicação.
