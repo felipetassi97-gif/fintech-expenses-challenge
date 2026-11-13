@@ -216,7 +216,7 @@ function DashboardSkeleton() {
       <section className="period-indicators" aria-hidden="true">
         <span className="skeleton-line skeleton-title" />
         <div className="period-indicator-grid">
-          {[0, 1, 2, 3].map((index) => (
+          {[0, 1].map((index) => (
             <article className="period-indicator-card skeleton-indicator" key={index}>
               <span className="skeleton-indicator-icon" />
               <span className="skeleton-indicator-text">
@@ -377,7 +377,7 @@ export function DashboardView({
               )}
             </section>
           </div>
-          <PeriodIndicators data={result.data} comparisonCaption={comparisonCaption} />
+          <PeriodIndicators data={result.data} />
         </>
       )}
     </>

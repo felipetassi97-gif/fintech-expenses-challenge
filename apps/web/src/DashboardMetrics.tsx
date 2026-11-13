@@ -81,11 +81,11 @@ function MetricIcon({ kind }: { kind: ComparisonKind }) {
   );
 }
 
-function IndicatorIcon({ kind }: { kind: "income" | "expense" | "share" | "result" }) {
+function IndicatorIcon({ kind }: { kind: "share" | "result" }) {
   return (
     <span className={`period-indicator-icon ${kind}`} aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        {kind === "income" ? <><path d="M5 19V12m5 7V8m5 11V5m5 14V9" /></> : kind === "expense" ? <><path d="m20 13-7 7L3 10V3h7l10 10Z" /><circle cx="7.5" cy="7.5" r=".8" /></> : kind === "share" ? <><path d="M12 3a9 9 0 1 0 9 9h-9V3Z" /><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z" /></> : <><path d="m4 16 6-6 4 4 6-7" /><path d="M15 7h5v5" /></>}
+        {kind === "share" ? <><path d="M12 3a9 9 0 1 0 9 9h-9V3Z" /><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z" /></> : <><path d="m4 16 6-6 4 4 6-7" /><path d="M15 7h5v5" /></>}
       </svg>
     </span>
   );
@@ -99,7 +99,7 @@ function IndicatorCard({
   help,
   tone = "neutral",
 }: {
-  kind: "income" | "expense" | "share" | "result";
+  kind: "share" | "result";
   value: string;
   label: string;
   detail: string;
@@ -206,13 +206,9 @@ export function DashboardTopMetrics({
 
 export function PeriodIndicators({
   data,
-  comparisonCaption,
 }: {
   data: Dashboard;
-  comparisonCaption: string;
 }) {
-  const incomeTone = changeTone(data.periodIndicators.incomeGrowth, "income");
-  const expenseTone = changeTone(data.periodIndicators.expenseVariation, "expense");
   const operationalValue = data.periodIndicators.operationalParticipation === null
     ? "—"
     : `${Number(data.periodIndicators.operationalParticipation).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
@@ -223,22 +219,6 @@ export function PeriodIndicators({
     <section className="period-indicators" aria-labelledby="period-indicators-title">
       <h2 id="period-indicators-title">Indicadores do período</h2>
       <div className="period-indicator-grid">
-        <IndicatorCard
-          kind="income"
-          value={changeText(data.periodIndicators.incomeGrowth)}
-          label="Crescimento das entradas"
-          detail={comparisonCaption}
-          help="Compara as entradas deste período com o período de referência. A variação é calculada sobre o valor anterior; sem base anterior, não há percentual."
-          tone={incomeTone}
-        />
-        <IndicatorCard
-          kind="expense"
-          value={changeText(data.periodIndicators.expenseVariation)}
-          label="Variação das despesas"
-          detail={comparisonCaption}
-          help="Compara as despesas deste período com o período de referência. A redução aparece em verde; o aumento, em vermelho."
-          tone={expenseTone}
-        />
         <IndicatorCard
           kind="share"
           value={operationalValue}

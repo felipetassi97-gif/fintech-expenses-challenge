@@ -71,10 +71,21 @@ export function TransactionEditor({
   const [message, setMessage] = useState("");
   const [amountError, setAmountError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDescription, setCategoryDescription] = useState("");
+  const [categoryMessage, setCategoryMessage] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [createdCategory, setCreatedCategory] = useState<Category | null>(null);
   const busy = write.busy;
   const operation = useRef(false);
+  const categoryOperation = useRef(false);
   const mounted = useRef(true);
   const amountInput = useRef<HTMLInputElement>(null);
+  const categoryNameInput = useRef<HTMLInputElement>(null);
+  const categoryOptions = createdCategory && !categories?.some((category) => category.id === createdCategory.id)
+    ? [createdCategory, ...(categories ?? [])]
+    : categories ?? [];
 
   useEffect(() => {
     mounted.current = true;
@@ -90,6 +101,57 @@ export function TransactionEditor({
       );
     }
   }, [categories, item]);
+
+  useEffect(() => {
+    if (createdCategory && categories?.some((category) => category.id === createdCategory.id)) {
+      setCreatedCategory(null);
+    }
+  }, [categories, createdCategory]);
+
+  function closeCategoryEditor() {
+    setCategoryEditorOpen(false);
+    setCategoryName("");
+    setCategoryDescription("");
+    setCategoryMessage("");
+  }
+
+  async function createCategory() {
+    if (categoryOperation.current || operation.current) return;
+    if (!categoryName.trim()) {
+      setCategoryMessage("Informe o nome da categoria.");
+      categoryNameInput.current?.focus();
+      return;
+    }
+    if (!write.start()) return;
+    categoryOperation.current = true;
+    setCategorySaving(true);
+    setCategoryMessage("");
+    let changed: "categories" | null = null;
+
+    try {
+      const category = await request<Category>("/categories", {
+        method: "POST",
+        token,
+        body: {
+          name: categoryName.trim(),
+          description: categoryDescription.trim() || null,
+        },
+      });
+      changed = "categories";
+      if (mounted.current) {
+        setCreatedCategory(category);
+        setForm((current) => ({ ...current, categoryId: category.id }));
+        closeCategoryEditor();
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401 && write.isActive()) logout();
+      else if (mounted.current) setCategoryMessage(errorText(error));
+    } finally {
+      categoryOperation.current = false;
+      if (mounted.current) setCategorySaving(false);
+      write.finish(changed);
+    }
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -195,9 +257,10 @@ export function TransactionEditor({
               </small>
             )}
           </label>
-          <label>
-            Categoria
+          <div className="transaction-category-field">
+            <label htmlFor="transaction-category">Categoria</label>
             <select
+              id="transaction-category"
               required
               value={form.categoryId}
               disabled={busy}
@@ -206,13 +269,30 @@ export function TransactionEditor({
               }
             >
               <option value="">Selecione</option>
-              {categories?.map((category) => (
+              {categoryOptions.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
             </select>
-          </label>
+            {item === "new" && (
+              <button
+                type="button"
+                className="link quick-category-toggle"
+                aria-expanded={categoryEditorOpen}
+                onClick={() => {
+                  if (categoryEditorOpen) closeCategoryEditor();
+                  else {
+                    setCategoryMessage("");
+                    setCategoryEditorOpen(true);
+                  }
+                }}
+                disabled={busy}
+              >
+                {categoryEditorOpen ? "Fechar criação" : "+ Criar categoria"}
+              </button>
+            )}
+          </div>
           <label>
             Data
             <input
@@ -226,17 +306,80 @@ export function TransactionEditor({
             />
           </label>
         </div>
+        {item === "new" && categoryEditorOpen && (
+          <section className="quick-category-panel" aria-label="Criar categoria">
+            <div className="quick-category-fields">
+              <label>
+                Nome
+                <input
+                  ref={categoryNameInput}
+                  value={categoryName}
+                  onChange={(event) => {
+                    setCategoryName(event.target.value);
+                    setCategoryMessage("");
+                  }}
+                  maxLength={120}
+                  aria-required="true"
+                  autoFocus
+                  disabled={busy}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void createCategory();
+                    }
+                  }}
+                />
+              </label>
+              <label>
+                Descrição <span className="muted">(opcional)</span>
+                <textarea
+                  value={categoryDescription}
+                  onChange={(event) => {
+                    setCategoryDescription(event.target.value);
+                    setCategoryMessage("");
+                  }}
+                  maxLength={500}
+                  rows={2}
+                  disabled={busy}
+                />
+              </label>
+            </div>
+            {categoryMessage && (
+              <p className="field-error" role="alert">
+                {categoryMessage}
+              </p>
+            )}
+            <div className="quick-category-actions">
+              <button
+                type="button"
+                className="button secondary"
+                onClick={closeCategoryEditor}
+                disabled={busy}
+              >
+                Cancelar criação
+              </button>
+              <button
+                type="button"
+                className="button primary"
+                onClick={() => void createCategory()}
+                disabled={busy || categorySaving}
+              >
+                {categorySaving ? "Salvando categoria..." : "Salvar categoria"}
+              </button>
+            </div>
+          </section>
+        )}
         {categoriesLoading && (
           <p className="state" role="status">
             Carregando categorias...
           </p>
         )}
-        {!categoriesLoading && categoriesError && (
+        {!categoriesLoading && categoriesError && !createdCategory && (
           <p className="alert error" role="alert">
             {categoriesError}
           </p>
         )}
-        {!categoriesLoading && !categoriesError && !categories?.length && (
+        {!categoriesLoading && !categoriesError && !categoryOptions.length && (
           <p className="alert">
             Cadastre uma categoria antes de criar uma transação.
           </p>
@@ -258,7 +401,8 @@ export function TransactionEditor({
           <button
             className="button primary"
             disabled={
-              busy || categoriesLoading || !!categoriesError || !categories?.length
+              busy || categoriesLoading || (!!categoriesError && !createdCategory) ||
+              categoryEditorOpen || !categoryOptions.some((category) => category.id === form.categoryId)
             }
           >
             {saving ? "Salvando..." : "Salvar transação"}

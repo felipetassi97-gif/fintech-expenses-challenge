@@ -45,11 +45,10 @@
 .content .period-select-wrap select:hover { background-color: #f8fbff; box-shadow: 0 3px 12px rgba(18, 84, 200, .07); }
 .content .period-indicators { margin: 25px 0 22px; }
 .content .period-indicators h2 { margin: 0 0 15px; font-size: 19px; }
-.content .period-indicator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.content .period-indicator-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 626px; }
 .content .period-indicator-card { display: flex; align-items: center; gap: 13px; min-width: 0; min-height: 104px; padding: 16px; border: 1px solid #d6e4f5; border-radius: 14px; background: linear-gradient(145deg, #fff, #f7faff); box-shadow: 0 4px 15px rgba(24, 52, 81, .035); }
 .content .period-indicator-icon { display: grid; place-items: center; width: 48px; height: 52px; flex: 0 0 48px; border-radius: 14px; background: #e8f2ff; color: #1254c8; }
 .content .period-indicator-icon svg { width: 27px; height: 27px; }
-.content .period-indicator-icon.expense { background: #e5f8f2; color: #05836b; }
 .content .period-indicator-icon.share { background: #e7f0ff; color: #1254c8; }
 .content .period-indicator-icon.result { background: #def8ee; color: #078d72; }
 .content .period-indicator-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }

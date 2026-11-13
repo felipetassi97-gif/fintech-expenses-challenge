@@ -153,3 +153,94 @@ test('pending forms block duplicate submissions and retain input after failure',
   await page.getByText('Alteração confirmada').waitFor();
   assert.equal(await editTransaction.isEnabled(), true);
 });
+
+test('quick category creation keeps the transaction draft and selects the new category', { skip: !browserPath && 'Chrome/Chromium is not installed; set CHROME_PATH', timeout: 60000 }, async t => {
+  const port = await freePort();
+  const url = `http://127.0.0.1:${port}`;
+  const server = spawn(vite, ['--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+    cwd: webRoot, env: { ...process.env, VITE_API_URL: `${url}/api` }, stdio: 'ignore',
+  });
+  t.after(() => server.kill());
+  await waitForServer(url, server);
+
+  const browser = await chromium.launch({ executablePath: browserPath, headless: true, args: ['--no-sandbox'] });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.addInitScript(() => sessionStorage.setItem('finance_session', 'quick-category-token'));
+
+  const categories = [];
+  const categoryBodies = [];
+  let transactionBody = null;
+  let transactionPosts = 0;
+  await page.route('**/api/**', async route => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+    const json = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) });
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE', 'Access-Control-Allow-Headers': '*' } });
+    if (path === '/api/auth/me') return json(200, { id: 'u', name: 'Usuário Teste', email: 'teste@example.test' });
+    if (path === '/api/categories' && req.method() === 'GET') return json(200, categories);
+    if (path === '/api/categories' && req.method() === 'POST') {
+      categoryBodies.push(req.postDataJSON());
+      if (categoryBodies.length === 1) return json(500, { message: 'Falha temporária' });
+      const created = { id: 'new-category', name: 'Planejamento', description: 'Revisão mensal' };
+      categories.push(created);
+      return json(201, created);
+    }
+    if (path === '/api/transactions' && req.method() === 'POST') {
+      transactionPosts++;
+      transactionBody = req.postDataJSON();
+      return json(201, { id: 'new-transaction' });
+    }
+    return json(404, { message: 'Unexpected test request' });
+  });
+
+  await page.goto(`${url}/#/categories`);
+  await page.getByRole('button', { name: 'Adicionar transação' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Descrição', { exact: true }).fill('Almoço com o time');
+  await dialog.getByLabel('Valor (R$)').fill('45,90');
+  await dialog.getByLabel('Data', { exact: true }).fill('2026-11-10');
+  assert.equal(await dialog.getByRole('button', { name: 'Salvar transação' }).isDisabled(), true);
+
+  await dialog.getByRole('button', { name: '+ Criar categoria' }).click();
+  let quickCategory = dialog.getByRole('region', { name: 'Criar categoria' });
+  await quickCategory.getByLabel('Nome', { exact: true }).fill('Categoria descartada');
+  await quickCategory.getByRole('button', { name: 'Cancelar criação' }).click();
+  await quickCategory.waitFor({ state: 'detached' });
+  assert.equal(categoryBodies.length, 0, 'canceling the inline form must not create a category');
+  assert.equal(await dialog.getByLabel('Descrição', { exact: true }).inputValue(), 'Almoço com o time');
+  assert.equal(await dialog.getByLabel('Valor (R$)').inputValue(), '45,90');
+
+  await dialog.getByRole('button', { name: '+ Criar categoria' }).click();
+  quickCategory = dialog.getByRole('region', { name: 'Criar categoria' });
+  const categoryName = quickCategory.getByLabel('Nome', { exact: true });
+  const categoryDescription = quickCategory.locator('textarea');
+  await categoryName.fill('  Planejamento  ');
+  await categoryDescription.fill('  Revisão mensal  ');
+  await quickCategory.getByRole('button', { name: 'Salvar categoria' }).click();
+  await quickCategory.getByRole('alert').waitFor();
+  assert.equal(categoryBodies.length, 1);
+  assert.equal(await categoryName.inputValue(), '  Planejamento  ');
+  assert.equal(await categoryDescription.inputValue(), '  Revisão mensal  ');
+  assert.equal(transactionPosts, 0, 'category creation must not submit the transaction');
+  assert.equal(await dialog.getByLabel('Descrição', { exact: true }).inputValue(), 'Almoço com o time');
+  assert.equal(await dialog.getByLabel('Valor (R$)').inputValue(), '45,90');
+
+  await quickCategory.getByRole('button', { name: 'Salvar categoria' }).click();
+  await dialog.getByLabel('Categoria', { exact: true }).locator('option[value="new-category"]').waitFor({ state: 'attached' });
+  assert.equal(await dialog.getByLabel('Categoria', { exact: true }).inputValue(), 'new-category');
+  assert.deepEqual(categoryBodies[1], { name: 'Planejamento', description: 'Revisão mensal' });
+  assert.equal(await dialog.getByLabel('Descrição', { exact: true }).inputValue(), 'Almoço com o time');
+  assert.equal(await dialog.getByLabel('Valor (R$)').inputValue(), '45,90');
+  assert.equal(await dialog.getByLabel('Data', { exact: true }).inputValue(), '2026-11-10');
+  assert.equal(transactionPosts, 0, 'the transaction remains unsent until its save button is pressed');
+
+  const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/transactions' && response.request().method() === 'POST');
+  await dialog.getByRole('button', { name: 'Salvar transação' }).click();
+  await saved;
+  await dialog.waitFor({ state: 'hidden' });
+  assert.deepEqual(transactionBody, {
+    categoryId: 'new-category', description: 'Almoço com o time', type: 'EXPENSE', amount: '45.90', date: '2026-11-10',
+  });
+  assert.equal(transactionPosts, 1);
+});
